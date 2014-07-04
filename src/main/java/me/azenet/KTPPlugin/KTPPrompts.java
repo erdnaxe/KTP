@@ -1,7 +1,6 @@
 package me.azenet.KTPPlugin;
 
 import java.util.ArrayList;
-
 import org.bukkit.ChatColor;
 import org.bukkit.conversations.ConversationContext;
 import org.bukkit.conversations.PlayerNamePrompt;
@@ -135,8 +134,8 @@ public class KTPPrompts {
         WHITE("White", ChatColor.WHITE),
         YELLOW("Yellow", ChatColor.YELLOW);
 
-        private String name;
-        private ChatColor color;
+        private final String name;
+        private final ChatColor color;
 
         StringToChatColor(String name, ChatColor color) {
             this.name = name;

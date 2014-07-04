@@ -1,7 +1,6 @@
 package me.azenet.KTPPlugin;
 
 import java.util.ArrayList;
-
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -10,11 +9,11 @@ import org.bukkit.scoreboard.Team;
 
 public class KTPTeam {
 
-    private String name;
-    private String displayName;
-    private ChatColor color;
-    private KTPPlugin plugin;
-    private ArrayList<Player> players = new ArrayList<Player>();
+    private final String name;
+    private final String displayName;
+    private final ChatColor color;
+    private final KTPPlugin plugin;
+    private final ArrayList<Player> players = new ArrayList<Player>();
 
     public KTPTeam(String name, String displayName, ChatColor color, KTPPlugin plugin) {
         this.name = name;

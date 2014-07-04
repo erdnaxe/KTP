@@ -3,7 +3,7 @@ package me.azenet.KTPPlugin;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
+import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
@@ -67,7 +67,7 @@ public class KTPPluginListener implements Listener {
 
                 @Override
                 public void run() {
-                    ev.getEntity().kickPlayer("jayjay");
+                    ev.getEntity().kickPlayer("Jay Jay !");
                 }
             }, 20L * this.p.getConfig().getInt("kick-on-death.time", 30));
         }
@@ -80,7 +80,6 @@ public class KTPPluginListener implements Listener {
             skull.setItemMeta(skullMeta);
             l.getWorld().dropItem(l, skull);
         } catch (Exception e) {
-            e.printStackTrace();
         }
 
     }
@@ -104,13 +103,12 @@ public class KTPPluginListener implements Listener {
     @EventHandler
     public void onPlayerJoin(final PlayerJoinEvent ev) {
         if (!this.p.isGameRunning()) {
-            ev.getPlayer().setGameMode(GameMode.CREATIVE);
+            ev.getPlayer().setGameMode(GameMode.ADVENTURE);
             Location l = ev.getPlayer().getWorld().getSpawnLocation();
             ev.getPlayer().teleport(l.add(0, 1, 0));
         }
         p.addToScoreboard(ev.getPlayer());
         Bukkit.getScheduler().runTaskLater(this.p, new BukkitRunnable() {
-
             @Override
             public void run() {
                 p.updatePlayerListName(ev.getPlayer());
@@ -213,8 +211,7 @@ public class KTPPluginListener implements Listener {
                 }
             }
         } catch (Exception e) {
-            Bukkit.getLogger().warning(ChatColor.RED + "Erreur dans le craft");
-            e.printStackTrace();
+            Bukkit.getLogger().log(Level.WARNING, "{0}Erreur dans le craft", ChatColor.RED);
         }
     }
 
@@ -226,10 +223,10 @@ public class KTPPluginListener implements Listener {
             ev.getDrops().clear();
             for (ItemStack i : drops) {
                 if (i.getType() == Material.GHAST_TEAR) {
-                    Bukkit.getLogger().info("Added " + i.getAmount() + " ghast tear(s)");
+                    Bukkit.getLogger().log(Level.INFO, "Added {0} ghast tear(s)", i.getAmount());
                     ev.getDrops().add(new ItemStack(Material.GOLD_INGOT, i.getAmount()));
                 } else {
-                    Bukkit.getLogger().info("Added " + i.getAmount() + " " + i.getType().toString());
+                    Bukkit.getLogger().log(Level.INFO, "Added {0} {1}", new Object[]{i.getAmount(), i.getType().toString()});
                     ev.getDrops().add(i);
                 }
             }
@@ -276,7 +273,7 @@ public class KTPPluginListener implements Listener {
             Boolean foundRottenFlesh = false;
             for (ItemStack is : pl.getInventory().getContents()) {
                 if (is != null && is.getType() == Material.ROTTEN_FLESH) {
-                    p.getLogger().info("" + is.getAmount());
+                    p.getLogger().log(Level.INFO, "{0}", is.getAmount());
                     if (is.getAmount() != 1) {
                         is.setAmount(is.getAmount() - 1);
                     } else {
