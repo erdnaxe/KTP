@@ -34,12 +34,23 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
+import me.confuser.barapi.BarAPI;
 
+/**
+ * Ceci est la classe principale du plugin KTP.
+ * Ce plugin a été développé par Azenet.
+ * Il a été forké ensuite par erdnaxe pour le rendre compatible et plus documenté.
+ * 
+ * @author erdnaxe & azenet
+ */
 public final class KTPPlugin extends JavaPlugin implements ConversationAbandonedListener {
 
-    private Logger logger = null;
-    private LinkedList<Location> loc = new LinkedList<Location>();
-    private Random random = null;
+    private static final Logger logger = Bukkit.getLogger();
+    private final FileConfiguration config_yml = this.getConfig();
+    private final Random random = new Random();
+    private final KTPPrompts uhp = new KTPPrompts(this);
+
+    private final LinkedList<Location> loc = new LinkedList<Location>();
     private ShapelessRecipe goldenMelon = null;
     private ShapedRecipe compass = null;
     private Integer episode = 0;
@@ -47,35 +58,25 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
     private Scoreboard sb = null;
     private Integer minutesLeft = 0;
     private Integer secondsLeft = 0;
-    private NumberFormat formatter = new DecimalFormat("00");
+    private final NumberFormat formatter = new DecimalFormat("00");
     private String sbobjname = "KTP";
     private Boolean damageIsOn = false;
-    private ArrayList<KTPTeam> teams = new ArrayList<KTPTeam>();
-    private HashMap<String, ConversationFactory> cfs = new HashMap<String, ConversationFactory>();
-    private KTPPrompts uhp = null;
-    private HashSet<String> deadPlayers = new HashSet<String>();
-    private FileConfiguration config_yml = this.getConfig();
+    private final ArrayList<KTPTeam> teams = new ArrayList<KTPTeam>();
+    private final HashMap<String, ConversationFactory> cfs = new HashMap<String, ConversationFactory>();
+    private final HashSet<String> deadPlayers = new HashSet<String>();
 
     @Override
     public void onEnable() {
-        // Initialisation des variables
-        logger = Bukkit.getLogger();
-        uhp = new KTPPrompts(this);
-        random = new Random();
-
         // On copie le fichier config.yml
         this.saveDefaultConfig();
 
         // On récupère les positions et on les ajoutes
-        logger.log(Level.INFO, "[KTPPlugin] Ajout des coordonnées...");
         List<String> listPositions = config_yml.getStringList("positions");
         for (String positions : listPositions) {
-            logger.log(Level.INFO, "[KTPPlugin] Ajout de : {0}", positions);
+            logger.log(Level.INFO, "[KTPPlugin] Ajout de la cordonnée '{0}'.", positions);
             String[] pos = positions.split(",");
             addLocation(Integer.parseInt(pos[0]), Integer.parseInt(pos[1]));
         }
-
-        logger.info("[KTPPlugin] KTPPlugin chargé !");
 
         // Recette du melon doré
         try {
@@ -113,6 +114,9 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         obj.setDisplayName("Vie");
         obj.setDisplaySlot(DisplaySlot.PLAYER_LIST);
 
+        // Création de la barre de temps
+        setTimeBarInfo();
+
         // Création des informations latérales
         setMatchInfo();
 
@@ -124,7 +128,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         // On met la difficulté à HARD
         getServer().getWorlds().get(0).setDifficulty(Difficulty.HARD);
 
-        // A découvrir plus tard -------------------------------------------------------------------------------------------------------------------
+        // A découvrir plus tard
         cfs.put("teamPrompt", new ConversationFactory(this)
                 .withModality(true)
                 .withFirstPrompt(uhp.getTNP())
@@ -140,10 +144,34 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                 .thatExcludesNonPlayersWithMessage("Il faut être un joueur ingame.")
                 .withLocalEcho(false)
                 .addConversationAbandonedListener(this));
+        
+        logger.info("[KTPPlugin] KTPPlugin est maintenant chargé");
     }
 
+    @Override
+    public void onDisable() {
+        logger.info("[KTPPlugin] KTPPlugin déchargé");
+    }
+
+    /**
+     * Ajouter un endroit de spawn pour le KTP.
+     * @param x
+     * @param z 
+     */
     public void addLocation(int x, int z) {
         loc.add(new Location(getServer().getWorlds().get(0), x, getServer().getWorlds().get(0).getHighestBlockYAt(x, z) + 120, z));
+    }
+
+    /**
+     * Modifie la valeur de la barre de temps suivant le temps restant
+     */
+    public void setTimeBarInfo() {
+        // Pour chaque joueur
+        Player[] onlinePlayerList = Bukkit.getServer().getOnlinePlayers();
+        for (Player player : onlinePlayerList) {
+            BarAPI.setMessage(player, "Temps restant : " + formatter.format(this.minutesLeft) + ":" + formatter.format(this.secondsLeft));
+            BarAPI.setHealth(player, this.minutesLeft * 5);
+        }
     }
 
     public void setMatchInfo() {
@@ -179,11 +207,6 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
             }
         }
         return aliveTeams;
-    }
-
-    @Override
-    public void onDisable() {
-        logger.info("UHPlugin unloaded");
     }
 
     public boolean onCommand(final CommandSender s, Command c, String l, String[] a) {
@@ -256,6 +279,27 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                 this.episode = 1;
                 this.minutesLeft = getEpisodeLength();
                 this.secondsLeft = 0;
+
+                // Gestion de la barre de temps
+                Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        setTimeBarInfo();
+                        secondsLeft--;
+                        if (secondsLeft == -1) {
+                            minutesLeft--;
+                            secondsLeft = 59;
+                        }
+                        if (minutesLeft == -1) {
+                            minutesLeft = getEpisodeLength();
+                            secondsLeft = 0;
+                            Bukkit.getServer().broadcastMessage(ChatColor.AQUA + "-------- Fin episode " + episode + " --------");
+                            shiftEpisode();
+                        }
+                    }
+                }, 20L, 20L);
+
+                // Gestion du Scoreboard
                 Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -272,7 +316,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                             shiftEpisode();
                         }
                     }
-                }, 20L, 20L);
+                }, 200L, 200L);
 
                 Bukkit.getServer().broadcastMessage(ChatColor.GREEN + "--- GO ---");
                 this.gameRunning = true;
@@ -421,9 +465,11 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
     }
 
     public void addToScoreboard(Player player) {
-        player.setScoreboard(sb);
-        sb.getObjective("Vie").getScore(player).setScore(0);
-        this.updatePlayerListName(player);
+        updatePlayerListName(player);
+
+        // AJout à la barre de temps
+        BarAPI.setMessage(player, "Temps restant : --;--");
+        BarAPI.setHealth(player, 100);
     }
 
     public void setLife(Player entity, int i) {
