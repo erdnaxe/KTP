@@ -77,37 +77,54 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
 
         logger.info("[KTPPlugin] KTPPlugin chargé !");
 
-        goldenMelon = new ShapelessRecipe(new ItemStack(Material.SPECKLED_MELON));
-        goldenMelon.addIngredient(1, Material.GOLD_BLOCK);
-        goldenMelon.addIngredient(1, Material.MELON);
-        this.getServer().addRecipe(goldenMelon);
-
-        if (getConfig().getBoolean("compass")) {
-            compass = new ShapedRecipe(new ItemStack(Material.COMPASS));
-            compass.shape(new String[]{"CIE", "IRI", "BIF"});
-            compass.setIngredient('I', Material.IRON_INGOT);
-            compass.setIngredient('R', Material.REDSTONE);
-            compass.setIngredient('C', Material.SULPHUR);
-            compass.setIngredient('E', Material.SPIDER_EYE);
-            compass.setIngredient('B', Material.BONE);
-            compass.setIngredient('F', Material.ROTTEN_FLESH);
-            this.getServer().addRecipe(compass);
+        // Recette du melon doré
+        try {
+            goldenMelon = new ShapelessRecipe(new ItemStack(Material.SPECKLED_MELON));
+            goldenMelon.addIngredient(1, Material.GOLD_BLOCK);
+            goldenMelon.addIngredient(1, Material.MELON);
+            this.getServer().addRecipe(goldenMelon);
+        } finally {
+            logger.info("[KTPPlugin] Recette du melon doré changé !");
         }
 
+        // Recette de la boussole
+        try {
+            if (config_yml.getBoolean("compass")) {
+                compass = new ShapedRecipe(new ItemStack(Material.COMPASS));
+                compass.shape(new String[]{"CIE", "IRI", "BIF"});
+                compass.setIngredient('I', Material.IRON_INGOT);
+                compass.setIngredient('R', Material.REDSTONE);
+                compass.setIngredient('C', Material.SULPHUR);
+                compass.setIngredient('E', Material.SPIDER_EYE);
+                compass.setIngredient('B', Material.BONE);
+                compass.setIngredient('F', Material.ROTTEN_FLESH);
+                this.getServer().addRecipe(compass);
+            }
+        } finally {
+            logger.info("[KTPPlugin] Recette de la boussole changé !");
+        }
+
+        // On ajoute les Listeners
         getServer().getPluginManager().registerEvents(new KTPPluginListener(this), this);
 
+        // Création du ScoreBoard des vies
         sb = Bukkit.getServer().getScoreboardManager().getNewScoreboard();
         Objective obj = sb.registerNewObjective("Vie", "dummy");
         obj.setDisplayName("Vie");
         obj.setDisplaySlot(DisplaySlot.PLAYER_LIST);
 
+        // Création des informations latérales
         setMatchInfo();
 
+        // On créer un environnement de début
         getServer().getWorlds().get(0).setGameRuleValue("doDaylightCycle", "false");
         getServer().getWorlds().get(0).setTime(6000L);
         getServer().getWorlds().get(0).setStorm(false);
+
+        // On met la difficulté à HARD
         getServer().getWorlds().get(0).setDifficulty(Difficulty.HARD);
 
+        // A découvrir plus tard -------------------------------------------------------------------------------------------------------------------
         cfs.put("teamPrompt", new ConversationFactory(this)
                 .withModality(true)
                 .withFirstPrompt(uhp.getTNP())
@@ -136,8 +153,8 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
             obj.setDisplaySlot(null);
             obj.unregister();
         } catch (Exception e) {
-
         }
+
         Random r = new Random();
         sbobjname = "KTP" + r.nextInt(10000000);
         obj = sb.registerNewObjective(sbobjname, "dummy");
