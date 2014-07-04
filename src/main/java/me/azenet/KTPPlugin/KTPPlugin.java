@@ -1,17 +1,15 @@
 package me.azenet.KTPPlugin;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Random;
+import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Difficulty;
@@ -21,6 +19,7 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.conversations.ConversationAbandonedEvent;
 import org.bukkit.conversations.ConversationAbandonedListener;
 import org.bukkit.conversations.ConversationFactory;
@@ -55,39 +54,28 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
     private HashMap<String, ConversationFactory> cfs = new HashMap<String, ConversationFactory>();
     private KTPPrompts uhp = null;
     private HashSet<String> deadPlayers = new HashSet<String>();
+    private FileConfiguration config_yml = this.getConfig();
 
     @Override
     public void onEnable() {
+        // Initialisation des variables
+        logger = Bukkit.getLogger();
+        uhp = new KTPPrompts(this);
+        random = new Random();
+
+        // On copie le fichier config.yml
         this.saveDefaultConfig();
 
-        File positions = new File("plugins/UHPlugin/positions.txt");
-        if (positions.exists()) {
-            BufferedReader br = null;
-            try {
-                br = new BufferedReader(new FileReader(positions));
-                String line;
-                while ((line = br.readLine()) != null) {
-                    String[] l = line.split(",");
-                    getLogger().info("Adding position " + Integer.parseInt(l[0]) + "," + Integer.parseInt(l[1]) + " from positions.txt");
-                    addLocation(Integer.parseInt(l[0]), Integer.parseInt(l[1]));
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    if (br != null) {
-                        br.close();
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                } //c tré l'inline
-            }
-
+        // On récupère les positions et on les ajoutes
+        logger.log(Level.INFO, "[KTPPlugin] Ajout des coordonnées...");
+        List<String> listPositions = config_yml.getStringList("positions");
+        for (String positions : listPositions) {
+            logger.log(Level.INFO, "[KTPPlugin] Ajout de : {0}", positions);
+            String[] pos = positions.split(",");
+            addLocation(Integer.parseInt(pos[0]), Integer.parseInt(pos[1]));
         }
-        uhp = new KTPPrompts(this);
-        logger = Bukkit.getLogger();
-        logger.info("UHPlugin loaded");
-        random = new Random();
+
+        logger.info("[KTPPlugin] KTPPlugin chargé !");
 
         goldenMelon = new ShapelessRecipe(new ItemStack(Material.SPECKLED_MELON));
         goldenMelon.addIngredient(1, Material.GOLD_BLOCK);
@@ -487,7 +475,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
     }
 
     public String getScoreboardName() {
-        String s = this.getConfig().getString("scoreboard", "Kill The Patrick");
+        String s = this.getConfig().getString("scoreboard", "KTP");
         return s.substring(0, Math.min(s.length(), 16));
     }
 
