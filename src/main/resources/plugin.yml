@@ -1,8 +1,8 @@
-name: UHPlugin
-main: me.azenet.UHPlugin.UHPlugin
-version: 0.1
+name: KTPPlugin
+main: me.azenet.KTPPlugin.KTPPlugin
+version: 0.2
 
 commands:
-   uh:
-      description: Ultra Harcore
-      usage: /uh <subcommand>
+   ktp:
+      description: KTP Control
+      usage: /ktp <subcommand>
