@@ -9,11 +9,11 @@ import org.bukkit.scoreboard.Team;
 
 public class KTPTeam {
 
-    private final String name;
-    private final String displayName;
-    private final ChatColor color;
+    private String name;
+    private String displayName;
+    private ChatColor color;
     private final KTPPlugin plugin;
-    private final ArrayList<Player> players = new ArrayList<Player>();
+    private ArrayList<Player> players = new ArrayList<Player>();
 
     public KTPTeam(String name, String displayName, ChatColor color, KTPPlugin plugin) {
         this.name = name;
@@ -34,11 +34,27 @@ public class KTPTeam {
         return name;
     }
 
+    public void setName(String n) {
+        name = n;
+    }
+
     public String getDisplayName() {
         return displayName;
     }
 
+    public void setDisplayName(String n) {
+        displayName = n;
+    }
+
     public ArrayList<Player> getPlayers() {
+        return players;
+    }
+
+    public void setPlayers(ArrayList<Player> l) {
+        players = l;
+    }
+
+    public ArrayList<Player> getPlayer() {
         return players;
     }
 
@@ -55,5 +71,9 @@ public class KTPTeam {
 
     public ChatColor getChatColor() {
         return color;
+    }
+
+    public void setChatColor(ChatColor c) {
+        color = c;
     }
 }

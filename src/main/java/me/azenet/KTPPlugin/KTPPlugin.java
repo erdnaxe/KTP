@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import me.confuser.barapi.BarAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Difficulty;
@@ -34,7 +35,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
-import me.confuser.barapi.BarAPI;
 
 /**
  * Ceci est la classe principale du plugin KTP. Ce plugin a été développé par
@@ -49,6 +49,8 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
     private final FileConfiguration config_yml = this.getConfig();
     private final Random random = new Random();
     private final KTPPrompts uhp = new KTPPrompts(this);
+    
+    private KTPMatchInfo MatchInfo;
 
     private final LinkedList<Location> loc = new LinkedList<Location>();
     private ShapelessRecipe goldenMelon = null;
@@ -119,6 +121,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         setTimeBarInfo();
 
         // Création des informations latérales
+        this.MatchInfo = new KTPMatchInfo("KTP");
         setMatchInfo();
 
         // On créer un environnement de début
@@ -163,6 +166,48 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
     }
 
     /**
+     * Modifier la taille du terrain
+     */
+    public void setSize(int size) {
+        try {
+            Integer halfMapSize = (int) Math.floor(size / 2);
+            Integer wallHeight = this.getConfig().getInt("map.wall.height");
+            Material wallBlock = Material.getMaterial(this.getConfig().getInt("map.wall.block"));
+
+            Location spawn = world.getSpawnLocation();
+            Integer limitXInf = spawn.add(-halfMapSize, 0, 0).getBlockX();
+
+            spawn = world.getSpawnLocation();
+            Integer limitXSup = spawn.add(halfMapSize, 0, 0).getBlockX();
+
+            spawn = world.getSpawnLocation();
+            Integer limitZInf = spawn.add(0, 0, -halfMapSize).getBlockZ();
+
+            spawn = world.getSpawnLocation();
+            Integer limitZSup = spawn.add(0, 0, halfMapSize).getBlockZ();
+
+            for (Integer x = limitXInf; x <= limitXSup; x++) {
+                world.getBlockAt(x, 1, limitZInf).setType(Material.BEDROCK);
+                world.getBlockAt(x, 1, limitZSup).setType(Material.BEDROCK);
+                for (Integer y = 2; y <= wallHeight; y++) {
+                    world.getBlockAt(x, y, limitZInf).setType(wallBlock);
+                    world.getBlockAt(x, y, limitZSup).setType(wallBlock);
+                }
+            }
+
+            for (Integer z = limitZInf; z <= limitZSup; z++) {
+                world.getBlockAt(limitXInf, 1, z).setType(Material.BEDROCK);
+                world.getBlockAt(limitXSup, 1, z).setType(Material.BEDROCK);
+                for (Integer y = 2; y <= wallHeight; y++) {
+                    world.getBlockAt(limitXInf, y, z).setType(wallBlock);
+                    world.getBlockAt(limitXSup, y, z).setType(wallBlock);
+                }
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    /**
      * Actualise la valeur de la barre de temps suivant le temps restant
      */
     public void setTimeBarInfo() {
@@ -178,28 +223,10 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
      * Actualiste les informations de la sidebar
      */
     public void setMatchInfo() {
-        Objective obj;
-
-        if (!"KTP".equals(sbobjname)) {
-            try {
-                obj = sb.getObjective(sbobjname);
-                obj.setDisplaySlot(null);
-                obj.unregister();
-            } catch (IllegalArgumentException e) {
-            } catch (IllegalStateException e) {
-            }
-        }
-
-        Random r = new Random();
-        sbobjname = "KTP" + r.nextInt(10000000);
-        obj = sb.registerNewObjective(sbobjname, "dummy");
-        obj = sb.getObjective(sbobjname);
-
-        obj.setDisplayName(this.getScoreboardName());
-        obj.setDisplaySlot(DisplaySlot.SIDEBAR);
-        obj.getScore(Bukkit.getOfflinePlayer(ChatColor.GRAY + "Episode " + ChatColor.WHITE + episode)).setScore(3);
-        obj.getScore(Bukkit.getOfflinePlayer(ChatColor.WHITE + "" + Bukkit.getServer().getOnlinePlayers().length + ChatColor.GRAY + " joueurs")).setScore(2);
-        obj.getScore(Bukkit.getOfflinePlayer(ChatColor.WHITE + "" + getAliveTeams().size() + ChatColor.GRAY + " teams")).setScore(1);
+        this.MatchInfo.setEpisode(episode);
+        this.MatchInfo.setNbJoueurs(Bukkit.getServer().getOnlinePlayers().length);
+        this.MatchInfo.setNbTeams(getAliveTeams().size());
+        this.MatchInfo.refreshMatchInfo();
     }
 
     private ArrayList<KTPTeam> getAliveTeams() {
@@ -214,6 +241,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         return aliveTeams;
     }
 
+    @Override
     public boolean onCommand(final CommandSender s, Command c, String l, String[] a) {
         if (c.getName().equalsIgnoreCase("ktp")) {
             if (!(s instanceof Player)) {
@@ -226,11 +254,11 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                 return true;
             }
             if (a.length == 0) {
-                pl.sendMessage("Usage : /ktp <start|shift|team|addspawn|generatewalls>");
+                pl.sendMessage("Usage : /ktp <start|shift|size|team|addspawn|generatewalls>");
                 return true;
             }
             if (a[0].equalsIgnoreCase("start")) {
-                if (teams.size() == 0) {
+                if (teams.isEmpty()) {
                     for (Player p : getServer().getOnlinePlayers()) {
                         KTPTeam uht = new KTPTeam(p.getName(), p.getName(), ChatColor.WHITE, this);
                         uht.addPlayer(p);
@@ -332,10 +360,18 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                 this.minutesLeft = getEpisodeLength();
                 this.secondsLeft = 0;
                 return true;
+            } else if (a[0].equalsIgnoreCase("size")) {
+                Bukkit.getServer().broadcastMessage(ChatColor.RED + "-------- Changement de taille : " + a[1] + " [forcé par " + s.getName() + "] --------");
+                setSize(Integer.parseInt(a[1]));
+                return true;
             } else if (a[0].equalsIgnoreCase("team")) {
-                Inventory iv = this.getServer().createInventory(pl, 54, "- Teams -");
+
+                // Création d'un inventaire
+                Inventory iv = this.getServer().createInventory(pl, 54, "Liste des teams");
+
+                // Liste des teams disponibles
+                ItemStack is;
                 Integer slot = 0;
-                ItemStack is = null;
                 for (KTPTeam t : teams) {
                     is = new ItemStack(Material.BEACON, t.getPlayers().size());
                     ItemMeta im = is.getItemMeta();
@@ -350,58 +386,15 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                     slot++;
                 }
 
+                // Création d'un diamant
                 ItemStack is2 = new ItemStack(Material.DIAMOND);
-                ItemMeta im2 = is2.getItemMeta();
-                im2.setDisplayName(ChatColor.AQUA + "" + ChatColor.ITALIC + "Créer une team");
-                is2.setItemMeta(im2);
+                is2.getItemMeta().setDisplayName(ChatColor.AQUA + "" + ChatColor.ITALIC + "Créer une team");
                 iv.setItem(53, is2);
 
+                // Affichage de l'inventaire
                 pl.openInventory(iv);
                 return true;
-//			} else if (a[0].equalsIgnoreCase("newteam")) {
-//				if (a.length != 4) {
-//					pl.sendMessage(ChatColor.RED+"Usage: /uh newteam nom couleur nom nomAffiché");
-//					return true;
-//				}
-//				if (a[1].length() > 16) {
-//					pl.sendMessage(ChatColor.RED+"Le nom de la team ne doit pas faire plus de 16 chars");
-//					return true;
-//				}
-//				if (a[3].length() > 32) {
-//					pl.sendMessage(ChatColor.RED+"Le nom affiché de la team ne doit pas faire plus de 32 chars");
-//				}
-//				ChatColor cc;
-//				try {
-//					cc = ChatColor.valueOf(a[2].toUpperCase());
-//				} catch (IllegalArgumentException e) {
-//					pl.sendMessage(ChatColor.RED+"La couleur est invalide.");
-//					return true;
-//				}
-//				teams.add(new UHTeam(a[1], a[3], cc, this));
-//				pl.sendMessage(ChatColor.GREEN+"Team créée. Utilisez /uh playertoteam "+a[1]+" nomjoueur pour y ajouter des joueurs.");
-//				return true;
-//			} else if (a[0].equalsIgnoreCase("playertoteam")) {
-//				if (a.length != 3) {
-//					pl.sendMessage(ChatColor.RED+"Usage: /uh playertoteam nomteam nomjoueur");
-//					return true;
-//				}
-//				UHTeam t = getTeam(a[1]);
-//				if (t == null) {
-//					pl.sendMessage(ChatColor.RED+"Team inexistante. /uh teams pour voir les teams");
-//					return true;
-//				}
-//				if (Bukkit.getPlayerExact(a[2]) == null) {
-//					pl.sendMessage(ChatColor.RED+"Le joueur est introuvable. (Il doit être connecté.)");
-//					return true;
-//				}
-//				t.addPlayer(Bukkit.getPlayerExact(a[2]));
-//				pl.sendMessage(ChatColor.GREEN+Bukkit.getPlayerExact(a[2]).getName()+" ajouté à la team "+a[1]+".");
-//				return true;
-//			} else if (a[0].equalsIgnoreCase("teams")) {
-//				for (UHTeam t : teams) {
-//					pl.sendMessage(ChatColor.DARK_GRAY+"- "+ChatColor.AQUA+t.getName()+ChatColor.DARK_GRAY+" ["+ChatColor.GRAY+t.getDisplayName()+ChatColor.DARK_GRAY+"] - "+ChatColor.GRAY+t.getPlayers().size()+ChatColor.DARK_GRAY+" joueurs");
-//				}
-//				return true;
+
             } else if (a[0].equalsIgnoreCase("addspawn")) {
                 addLocation(pl.getLocation().getBlockX(), pl.getLocation().getBlockZ());
                 pl.sendMessage(ChatColor.DARK_GRAY + "Position ajoutée: " + ChatColor.GRAY + pl.getLocation().getBlockX() + "," + pl.getLocation().getBlockZ());
@@ -454,6 +447,38 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         }
         return false;
     }
+    /*
+     public void createTeamCreateInventory(Player pl) {
+     // Création d'un inventaire
+     Inventory iv = this.getServer().createInventory(pl, 54, "Création d'une team");
+
+     // Liste des teams disponibles
+     ItemStack is;
+     Integer slot = 0;
+
+     for (KTPTeam t : teams) {
+     is = new ItemStack(Material.BEACON, t.getPlayers().size());
+     ItemMeta im = is.getItemMeta();
+     im.setDisplayName(t.getChatColor() + t.getDisplayName());
+     ArrayList<String> lore = new ArrayList<String>();
+     for (Player p : t.getPlayers()) {
+     lore.add("- " + p.getDisplayName());
+     }
+     im.setLore(lore);
+     is.setItemMeta(im);
+     iv.setItem(slot, is);
+     slot++;
+     }
+
+     // Création d'un diamant
+     ItemStack is2 = new ItemStack(Material.DIAMOND);
+     is2.getItemMeta().setDisplayName(ChatColor.AQUA + "" + ChatColor.ITALIC + "Créer une team");
+     iv.setItem(53, is2);
+
+     // Affichage de l'inventaire
+     pl.openInventory(iv);
+     }
+     */
 
     public void shiftEpisode() {
         this.episode++;

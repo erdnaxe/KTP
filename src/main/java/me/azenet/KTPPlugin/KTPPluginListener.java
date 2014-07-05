@@ -33,9 +33,11 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
 import org.bukkit.event.weather.WeatherChangeEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.ShapelessRecipe;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -157,7 +159,27 @@ public class KTPPluginListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent ev) {
-        if (ev.getInventory().getName().equals("- Teams -")) {
+        if (ev.getInventory().getName().equals("Liste des teams")) {
+            // Récupération du joueur
+            Player pl = (Player) ev.getWhoClicked();
+
+            // Annulation de l'event
+            ev.setCancelled(true);
+
+            if (ev.getCurrentItem().getType() == Material.DIAMOND) {
+                // Ouverture de l'inventaire
+                pl.closeInventory();
+                //p.createTeamCreateInventory(pl);
+            } else if (ev.getCurrentItem().getType() == Material.BEACON) {
+                pl.closeInventory();
+                Conversation c = p.getConversationFactory("playerPrompt").buildConversation(pl);
+                c.getContext().setSessionData("nomTeam", ChatColor.stripColor(ev.getCurrentItem().getItemMeta().getDisplayName()));
+                c.getContext().setSessionData("color", p.getTeam(ChatColor.stripColor(ev.getCurrentItem().getItemMeta().getDisplayName())).getChatColor());
+                c.begin();
+            }
+        }
+
+        if (ev.getInventory().getName().equals("Création d'une team")) {
             Player pl = (Player) ev.getWhoClicked();
             ev.setCancelled(true);
             if (ev.getCurrentItem().getType() == Material.DIAMOND) {
