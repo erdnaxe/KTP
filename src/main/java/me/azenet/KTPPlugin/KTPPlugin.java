@@ -18,7 +18,6 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.conversations.ConversationAbandonedEvent;
@@ -150,6 +149,9 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                 .withLocalEcho(false)
                 .addConversationAbandonedListener(this));
 
+        // On crée les commandes
+        getCommand("ktp").setExecutor(new KTPCommandExecutor(this));
+
         logger.info("[KTPPlugin] KTPPlugin est maintenant chargé");
     }
 
@@ -249,258 +251,181 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         return aliveTeams;
     }
 
-    /**
-     * Fonction pour formatter un titre dans le chat.
-     *
-     * @param titre Titre original.
-     * @param couleur Couleur des pointillés
-     * @return Titre formaté.
-     */
-    public String createChatTitle(String titre, ChatColor couleur) {
-        Integer taillePointillees = ((46 - titre.length()) / 2);
-        String chaineSortie = couleur + "";
+    public boolean startGame(CommandSender sender) {
+        if (teams.isEmpty()) {
+            for (Player p : getServer().getOnlinePlayers()) {
+                KTPTeam uht = new KTPTeam(this.sb);
+                uht.setName(p.getName());
+                uht.setDisplayName(p.getName());
 
-        for (Integer i = 0; i <= taillePointillees; i++) {
-            chaineSortie += "-";
+                uht.addPlayer(p);
+                teams.add(uht);
+            }
         }
 
-        chaineSortie += ChatColor.WHITE + " " + titre + " " + couleur;
-
-        for (Integer i = 0; i <= taillePointillees; i++) {
-            chaineSortie += "-";
+        if (loc.size() < teams.size()) {
+            sender.sendMessage(ChatColor.RED + "Pas assez de positions de TP");
+            return true;
         }
 
-        return chaineSortie;
+        LinkedList<Location> unusedTP = loc;
+        for (final KTPTeam t : teams) {
+            Random random = new Random();
+            final Location lo = unusedTP.get(random.nextInt(unusedTP.size()));
+            Bukkit.getScheduler().runTaskLater(this, new BukkitRunnable() {
+
+                @Override
+                public void run() {
+                    t.teleportTo(lo);
+                    for (Player p : t.getPlayers()) {
+                        p.setGameMode(GameMode.SURVIVAL);
+                        p.setHealth(20);
+                        p.setFoodLevel(20);
+                        p.setExhaustion(5F);
+                        p.getInventory().clear();
+                        p.getInventory().setArmorContents(new ItemStack[]{new ItemStack(Material.AIR), new ItemStack(Material.AIR),
+                            new ItemStack(Material.AIR), new ItemStack(Material.AIR)});
+                        p.setExp(0L + 0F);
+                        p.setLevel(0);
+                        p.closeInventory();
+                        p.getActivePotionEffects().clear();
+                        p.setCompassTarget(lo);
+                    }
+                }
+            }, 10L);
+
+            unusedTP.remove(lo);
+        }
+        Bukkit.getScheduler().runTaskLater(this, new BukkitRunnable() {
+
+            @Override
+            public void run() {
+                damageIsOn = true;
+            }
+        }, 600L);
+
+        world.setGameRuleValue("doDaylightCycle", ((Boolean) getConfig().getBoolean("daylightCycle.do")).toString());
+        world.setTime(getConfig().getLong("daylightCycle.time"));
+        world.setStorm(false);
+        world.setDifficulty(Difficulty.HARD);
+        this.episode = 1;
+        this.minutesLeft = getEpisodeLength();
+        this.secondsLeft = 0;
+
+        // Gestion de la barre de temps
+        Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new BukkitRunnable() {
+            @Override
+            public void run() {
+                setTimeBarInfo();
+                secondsLeft--;
+                if (secondsLeft == -1) {
+                    minutesLeft--;
+                    secondsLeft = 59;
+                }
+                if (minutesLeft == -1) {
+                    Bukkit.getServer().broadcastMessage(ChatColor.AQUA + "-------- Fin episode " + episode + " --------");
+                    shiftEpisode();
+                }
+            }
+        }, 20L, 20L);
+
+        // Gestion du Scoreboard
+        Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new BukkitRunnable() {
+            @Override
+            public void run() {
+                setMatchInfo();
+            }
+        }, 20L, 20L);
+
+        Bukkit.getServer().broadcastMessage(ChatColor.GREEN + "--- GO ---");
+        this.gameRunning = true;
+
+        return true;
     }
 
-    @Override
-    public boolean onCommand(final CommandSender sender, Command c, String l, String[] a) {
-        if (c.getName().equalsIgnoreCase("ktp")) {
-            // On vérifit que l'exécuteur est un joueur
-            if (!(sender instanceof Player)) {
-                sender.sendMessage(ChatColor.RED + "Vous devez être un joueur");
-                return true;
+    public boolean generateWalls(CommandSender sender) {
+        sender.sendMessage(ChatColor.GRAY + "Génération en cours...");
+        try {
+            Integer halfMapSize = (int) Math.floor(this.getConfig().getInt("map.size") / 2);
+            Integer wallHeight = this.getConfig().getInt("map.wall.height");
+            Material wallBlock = Material.getMaterial(this.getConfig().getInt("map.wall.block"));
+
+            Location spawn = world.getSpawnLocation();
+            Integer limitXInf = spawn.add(-halfMapSize, 0, 0).getBlockX();
+
+            spawn = world.getSpawnLocation();
+            Integer limitXSup = spawn.add(halfMapSize, 0, 0).getBlockX();
+
+            spawn = world.getSpawnLocation();
+            Integer limitZInf = spawn.add(0, 0, -halfMapSize).getBlockZ();
+
+            spawn = world.getSpawnLocation();
+            Integer limitZSup = spawn.add(0, 0, halfMapSize).getBlockZ();
+
+            for (Integer x = limitXInf; x <= limitXSup; x++) {
+                world.getBlockAt(x, 1, limitZInf).setType(Material.BEDROCK);
+                world.getBlockAt(x, 1, limitZSup).setType(Material.BEDROCK);
+                for (Integer y = 2; y <= wallHeight; y++) {
+                    world.getBlockAt(x, y, limitZInf).setType(wallBlock);
+                    world.getBlockAt(x, y, limitZSup).setType(wallBlock);
+                }
             }
 
-            // Afficher l'aide si aucun paramètre n'est donné.
-            if (a.length == 0) {
-                sender.sendMessage(createChatTitle("Aide : KTP", ChatColor.YELLOW));
-                sender.sendMessage(ChatColor.GOLD + "/ktp start : " + ChatColor.WHITE + "Démarre le jeu");
-                sender.sendMessage(ChatColor.GOLD + "/ktp shift : " + ChatColor.WHITE + "Saute un épisode");
-                sender.sendMessage(ChatColor.GOLD + "/ktp addgamespawn : " + ChatColor.WHITE + "Ajoute un point de spawn");
-                sender.sendMessage(ChatColor.GOLD + "/ktp setspawn : " + ChatColor.WHITE + "Modifie le centre de la map");
-                sender.sendMessage(ChatColor.GOLD + "/ktp setsize : " + ChatColor.WHITE + "Modifie la taille de la map");
-                sender.sendMessage(ChatColor.GOLD + "/ktp generatewalls : " + ChatColor.WHITE + "Crée un mur autour de la map");
-                sender.sendMessage(ChatColor.GOLD + "/ktp addteam : " + ChatColor.WHITE + "Ajoute une équipe");
-                return true;
+            for (Integer z = limitZInf; z <= limitZSup; z++) {
+                world.getBlockAt(limitXInf, 1, z).setType(Material.BEDROCK);
+                world.getBlockAt(limitXSup, 1, z).setType(Material.BEDROCK);
+                for (Integer y = 2; y <= wallHeight; y++) {
+                    world.getBlockAt(limitXInf, y, z).setType(wallBlock);
+                    world.getBlockAt(limitXSup, y, z).setType(wallBlock);
+                }
             }
-
-            // Commandes
-            if (a[0].equalsIgnoreCase("start")) {
-                if (teams.isEmpty()) {
-                    for (Player p : getServer().getOnlinePlayers()) {
-                        KTPTeam uht = new KTPTeam(this.sb);
-                        uht.setName(p.getName());
-                        uht.setDisplayName(p.getName());
-
-                        uht.addPlayer(p);
-                        teams.add(uht);
-                    }
-                }
-                if (loc.size() < teams.size()) {
-                    sender.sendMessage(ChatColor.RED + "Pas assez de positions de TP");
-                    return true;
-                }
-                LinkedList<Location> unusedTP = loc;
-                for (final KTPTeam t : teams) {
-                    Random random = new Random();
-                    final Location lo = unusedTP.get(random.nextInt(unusedTP.size()));
-                    Bukkit.getScheduler().runTaskLater(this, new BukkitRunnable() {
-
-                        @Override
-                        public void run() {
-                            t.teleportTo(lo);
-                            for (Player p : t.getPlayers()) {
-                                p.setGameMode(GameMode.SURVIVAL);
-                                p.setHealth(20);
-                                p.setFoodLevel(20);
-                                p.setExhaustion(5F);
-                                p.getInventory().clear();
-                                p.getInventory().setArmorContents(new ItemStack[]{new ItemStack(Material.AIR), new ItemStack(Material.AIR),
-                                    new ItemStack(Material.AIR), new ItemStack(Material.AIR)});
-                                p.setExp(0L + 0F);
-                                p.setLevel(0);
-                                p.closeInventory();
-                                p.getActivePotionEffects().clear();
-                                p.setCompassTarget(lo);
-                            }
-                        }
-                    }, 10L);
-
-                    unusedTP.remove(lo);
-                }
-                Bukkit.getScheduler().runTaskLater(this, new BukkitRunnable() {
-
-                    @Override
-                    public void run() {
-                        damageIsOn = true;
-                    }
-                }, 600L);
-
-                world.setGameRuleValue("doDaylightCycle", ((Boolean) getConfig().getBoolean("daylightCycle.do")).toString());
-                world.setTime(getConfig().getLong("daylightCycle.time"));
-                world.setStorm(false);
-                world.setDifficulty(Difficulty.HARD);
-                this.episode = 1;
-                this.minutesLeft = getEpisodeLength();
-                this.secondsLeft = 0;
-
-                // Gestion de la barre de temps
-                Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        setTimeBarInfo();
-                        secondsLeft--;
-                        if (secondsLeft == -1) {
-                            minutesLeft--;
-                            secondsLeft = 59;
-                        }
-                        if (minutesLeft == -1) {
-                            minutesLeft = getEpisodeLength();
-                            secondsLeft = 0;
-                            Bukkit.getServer().broadcastMessage(ChatColor.AQUA + "-------- Fin episode " + episode + " --------");
-                            shiftEpisode();
-                        }
-                    }
-                }, 20L, 20L);
-
-                // Gestion du Scoreboard
-                Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        setMatchInfo();
-                        secondsLeft--;
-                        if (secondsLeft == -1) {
-                            minutesLeft--;
-                            secondsLeft = 59;
-                        }
-                        if (minutesLeft == -1) {
-                            minutesLeft = getEpisodeLength();
-                            secondsLeft = 0;
-
-                            Bukkit.getServer().broadcastMessage(createChatTitle("Fin épisode", ChatColor.AQUA));
-                            shiftEpisode();
-                        }
-                    }
-                }, 200L, 200L);
-
-                Bukkit.getServer().broadcastMessage(ChatColor.GREEN + "--- GO ---");
-                this.gameRunning = true;
-                return true;
-            } else if (a[0].equalsIgnoreCase("shift")) {
-                Bukkit.getServer().broadcastMessage(createChatTitle("Fin épisode [forcé par " + sender.getName() + "]", ChatColor.AQUA));
-                shiftEpisode();
-                this.minutesLeft = getEpisodeLength();
-                this.secondsLeft = 0;
-                return true;
-            } else if (a[0].equalsIgnoreCase("addgamespawn")) {
-                Player pl = (Player) sender;
-
-                addLocation(pl.getLocation().getBlockX(), pl.getLocation().getBlockZ());
-                pl.sendMessage(ChatColor.DARK_GRAY + "Position ajoutée: " + ChatColor.GRAY + pl.getLocation().getBlockX() + "," + pl.getLocation().getBlockZ());
-                return true;
-            } else if (a[0].equalsIgnoreCase("setspawn")) {
-                Player pl = (Player) sender;
-                Location pos = pl.getLocation();
-
-                world.setSpawnLocation(pos.getBlockX(), pos.getBlockY(), pos.getBlockZ());
-                sender.sendMessage(ChatColor.GREEN + "Spawn déplacé !");
-
-                return true;
-            } else if (a[0].equalsIgnoreCase("setsize")) {
-                Bukkit.getServer().broadcastMessage(createChatTitle("Changement de taille [" + a[1] + "]", ChatColor.GOLD));
-                setSize(Integer.parseInt(a[1]));
-                return true;
-            } else if (a[0].equalsIgnoreCase("generateWalls")) {
-                sender.sendMessage(ChatColor.GRAY + "Génération en cours...");
-                try {
-                    Integer halfMapSize = (int) Math.floor(this.getConfig().getInt("map.size") / 2);
-                    Integer wallHeight = this.getConfig().getInt("map.wall.height");
-                    Material wallBlock = Material.getMaterial(this.getConfig().getInt("map.wall.block"));
-
-                    Player pl = (Player) sender;
-                    World w = pl.getWorld();
-
-                    Location spawn = w.getSpawnLocation();
-                    Integer limitXInf = spawn.add(-halfMapSize, 0, 0).getBlockX();
-
-                    spawn = w.getSpawnLocation();
-                    Integer limitXSup = spawn.add(halfMapSize, 0, 0).getBlockX();
-
-                    spawn = w.getSpawnLocation();
-                    Integer limitZInf = spawn.add(0, 0, -halfMapSize).getBlockZ();
-
-                    spawn = w.getSpawnLocation();
-                    Integer limitZSup = spawn.add(0, 0, halfMapSize).getBlockZ();
-
-                    for (Integer x = limitXInf; x <= limitXSup; x++) {
-                        w.getBlockAt(x, 1, limitZInf).setType(Material.BEDROCK);
-                        w.getBlockAt(x, 1, limitZSup).setType(Material.BEDROCK);
-                        for (Integer y = 2; y <= wallHeight; y++) {
-                            w.getBlockAt(x, y, limitZInf).setType(wallBlock);
-                            w.getBlockAt(x, y, limitZSup).setType(wallBlock);
-                        }
-                    }
-
-                    for (Integer z = limitZInf; z <= limitZSup; z++) {
-                        w.getBlockAt(limitXInf, 1, z).setType(Material.BEDROCK);
-                        w.getBlockAt(limitXSup, 1, z).setType(Material.BEDROCK);
-                        for (Integer y = 2; y <= wallHeight; y++) {
-                            w.getBlockAt(limitXInf, y, z).setType(wallBlock);
-                            w.getBlockAt(limitXSup, y, z).setType(wallBlock);
-                        }
-                    }
-                } catch (Exception e) {
-                    sender.sendMessage(ChatColor.RED + "Echec génération. Voir console pour détails.");
-                    return true;
-                }
-                sender.sendMessage(ChatColor.GRAY + "Génération terminée.");
-                return true;
-            } else if (a[0].equalsIgnoreCase("addteam")) {
-                Player pl = (Player) sender;
-
-                // Création d'un inventaire
-                Inventory iv = this.getServer().createInventory(pl, 54, "Liste des teams");
-
-                // Liste des teams disponibles
-                ItemStack is;
-                Integer slot = 0;
-                for (KTPTeam t : teams) {
-                    is = new ItemStack(Material.BEACON, t.getPlayers().size());
-                    ItemMeta im = is.getItemMeta();
-                    im.setDisplayName(t.getChatColor() + t.getDisplayName());
-                    ArrayList<String> lore = new ArrayList<String>();
-                    for (Player p : t.getPlayers()) {
-                        lore.add("- " + p.getDisplayName());
-                    }
-                    im.setLore(lore);
-                    is.setItemMeta(im);
-                    iv.setItem(slot, is);
-                    slot++;
-                }
-
-                // Création d'un diamant
-                ItemStack is2 = new ItemStack(Material.DIAMOND);
-                is2.getItemMeta().setDisplayName(ChatColor.AQUA + "" + ChatColor.ITALIC + "Créer une team");
-                iv.setItem(53, is2);
-
-                // Affichage de l'inventaire
-                pl.openInventory(iv);
-                return true;
-
-            }
+        } catch (Exception e) {
+            sender.sendMessage(ChatColor.RED + "Echec génération. Voir console pour détails.");
+            return true;
         }
-        return false;
+        sender.sendMessage(ChatColor.GRAY + "Génération terminée.");
+        return true;
+    }
+
+    public boolean createTeamGUI(Player pl) {
+        // Création d'un inventaire
+        Inventory iv = this.getServer().createInventory(pl, 54, "Liste des teams");
+
+        // Liste des teams disponibles
+        ItemStack is;
+        Integer slot = 0;
+        for (KTPTeam t : teams) {
+            is = new ItemStack(Material.BEACON, t.getPlayers().size());
+            ItemMeta im = is.getItemMeta();
+            im.setDisplayName(t.getChatColor() + t.getDisplayName());
+            ArrayList<String> lore = new ArrayList<String>();
+            for (Player p : t.getPlayers()) {
+                lore.add("- " + p.getDisplayName());
+            }
+            im.setLore(lore);
+            is.setItemMeta(im);
+            iv.setItem(slot, is);
+            slot++;
+        }
+
+        // Création d'un diamant
+        ItemStack is2 = new ItemStack(Material.DIAMOND);
+        is2.getItemMeta().setDisplayName(ChatColor.AQUA + "" + ChatColor.ITALIC + "Créer une team");
+        iv.setItem(53, is2);
+
+        // Affichage de l'inventaire
+        pl.openInventory(iv);
+        return true;
+    }
+
+    public boolean setSpawnLocation(CommandSender sender) {
+        Player pl = (Player) sender;
+        Location pos = pl.getLocation();
+
+        world.setSpawnLocation(pos.getBlockX(), pos.getBlockY(), pos.getBlockZ());
+        sender.sendMessage(ChatColor.GREEN + "Spawn déplacé !");
+
+        return true;
     }
 
     /*
@@ -536,6 +461,9 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
      }
      */
     public void shiftEpisode() {
+        minutesLeft = getEpisodeLength();
+        secondsLeft = 0;
+
         this.episode++;
     }
 
