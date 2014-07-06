@@ -51,13 +51,16 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
     private final KTPPrompts uhp = new KTPPrompts(this);
 
     private KTPMatchInfo MatchInfo;
+    private KTPPlayerHealth PlayerHealth;
 
     private final LinkedList<Location> loc = new LinkedList<Location>();
     private ShapelessRecipe goldenMelon = null;
     private ShapedRecipe compass = null;
     private Integer episode = 0;
     private Boolean gameRunning = false;
+
     private Scoreboard sb = null;
+
     private Integer minutesLeft = 0;
     private Integer secondsLeft = 0;
     private final NumberFormat formatter = new DecimalFormat("00");
@@ -72,7 +75,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         // On copie le fichier config.yml
         this.saveDefaultConfig();
 
-        // On ouvre le ficheir config.yml
+        // On ouvre le fichier config.yml
         config_yml = this.getConfig();
 
         // On récupère le monde
@@ -87,6 +90,9 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
             logger.log(Level.INFO, "[KTPPlugin] Ajout de la cordonn\u00e9e {0},{1}", new Object[]{pos[0], pos[1]});
             addLocation(Integer.parseInt(pos[0]), Integer.parseInt(pos[1]));
         }
+
+        // On ajoute les Listeners
+        getServer().getPluginManager().registerEvents(new KTPPluginListener(this), this);
 
         // Recette du melon doré
         try {
@@ -115,21 +121,16 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
             logger.info("[KTPPlugin] Recette de la boussole changé !");
         }
 
-        // On ajoute les Listeners
-        getServer().getPluginManager().registerEvents(new KTPPluginListener(this), this);
+        // Récupération du Scoreboard du serveur
+        sb = Bukkit.getServer().getScoreboardManager().getMainScoreboard();
 
-        // Création du ScoreBoard des vies
-        sb = Bukkit.getServer().getScoreboardManager().getNewScoreboard();
-        Objective obj = sb.registerNewObjective("Vie", "dummy");
-        obj.setDisplayName("Vie");
-        obj.setDisplaySlot(DisplaySlot.PLAYER_LIST);
+        // Création des objectifs
+        this.PlayerHealth = new KTPPlayerHealth(sb);
+        this.MatchInfo = new KTPMatchInfo("KTP", sb);
+        this.setMatchInfo();
 
         // Création de la barre de temps
-        setTimeBarInfo();
-
-        // Création des informations latérales
-        this.MatchInfo = new KTPMatchInfo("KTP", this);
-        setMatchInfo();
+        this.setTimeBarInfo();
 
         // On créer un environnement de début
         getServer().getWorlds().get(0).setGameRuleValue("doDaylightCycle", "false");
@@ -174,6 +175,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
 
     /**
      * Modifier la taille du terrain
+     *
      * @param size Nouvelle taille
      */
     public void setSize(int size) {
@@ -268,7 +270,10 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
             if (a[0].equalsIgnoreCase("start")) {
                 if (teams.isEmpty()) {
                     for (Player p : getServer().getOnlinePlayers()) {
-                        KTPTeam uht = new KTPTeam(p.getName(), p.getName(), ChatColor.WHITE, this);
+                        KTPTeam uht = new KTPTeam(this.sb);
+                        uht.setName(p.getName());
+                        uht.setDisplayName(p.getName());
+                        
                         uht.addPlayer(p);
                         teams.add(uht);
                     }
@@ -497,9 +502,9 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
     }
 
     public void updatePlayerListName(Player p) {
-        p.setScoreboard(sb);
+        /*p.setScoreboard(sb);
         Integer he = (int) Math.round(p.getHealth());
-        sb.getObjective("Vie").getScore(p).setScore(he);
+        sb.getObjective("Vie").getScore(p).setScore(he);*/
     }
 
     public void addToScoreboard(Player player) {
@@ -554,7 +559,11 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
 
     public boolean createTeam(String name, ChatColor color) {
         if (teams.size() <= 50) {
-            teams.add(new KTPTeam(name, name, color, this));
+            KTPTeam cTeam = new KTPTeam(this.sb);
+            cTeam.setName(name);
+            cTeam.setDisplayName(name);
+            cTeam.setChatColor(color);
+            teams.add(cTeam);
             return true;
         }
         return false;

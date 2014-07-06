@@ -9,22 +9,18 @@ import org.bukkit.scoreboard.Team;
 
 public class KTPTeam {
 
-    private String name;
-    private String displayName;
-    private ChatColor color;
-    private final KTPPlugin plugin;
+    private String name = "Team";
+    private String displayName = "Team";
+    private ChatColor color = ChatColor.WHITE;
     private ArrayList<Player> players = new ArrayList<Player>();
+    private Scoreboard board;
 
-    public KTPTeam(String name, String displayName, ChatColor color, KTPPlugin plugin) {
-        this.name = name;
-        this.displayName = displayName;
-        this.color = color;
-        this.plugin = plugin;
+    public KTPTeam(Scoreboard sb) {
+        board = sb; // On récupère le scoreboard
 
-        Scoreboard sb = this.plugin.getScoreboard();
-        sb.registerNewTeam(this.name);
+        board.registerNewTeam(this.name);
 
-        Team t = sb.getTeam(this.name);
+        Team t = board.getTeam(this.name);
         t.setDisplayName(this.displayName);
         t.setCanSeeFriendlyInvisibles(true);
         t.setPrefix(this.color + "");
@@ -60,7 +56,7 @@ public class KTPTeam {
 
     public void addPlayer(Player playerExact) {
         players.add(playerExact);
-        plugin.getScoreboard().getTeam(this.name).addPlayer(playerExact);
+        board.getTeam(this.name).addPlayer(playerExact);
     }
 
     public void teleportTo(Location lo) {
