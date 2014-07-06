@@ -45,28 +45,25 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
 
     private static final Logger logger = Bukkit.getLogger();
     private FileConfiguration config_yml;
-    private final Random random = new Random();
-    private final KTPPrompts uhp = new KTPPrompts(this);
+    private World world;
+    private Scoreboard sb = null;
 
     private KTPMatchInfo MatchInfo;
     private KTPPlayerHealth PlayerHealth;
-
-    private final LinkedList<Location> loc = new LinkedList<Location>();
     private ShapelessRecipe goldenMelon = null;
     private ShapedRecipe compass = null;
-    private Integer episode = 0;
+
     private Boolean gameRunning = false;
-
-    private Scoreboard sb = null;
-
+    private Boolean damageIsOn = false;
+    private Integer episode = 0;
     private Integer minutesLeft = 0;
     private Integer secondsLeft = 0;
-    private final NumberFormat formatter = new DecimalFormat("00");
-    private Boolean damageIsOn = false;
+
+    private final KTPPrompts uhp = new KTPPrompts(this);
+    private final LinkedList<Location> loc = new LinkedList<Location>();
     private final ArrayList<KTPTeam> teams = new ArrayList<KTPTeam>();
     private final HashMap<String, ConversationFactory> cfs = new HashMap<String, ConversationFactory>();
     private final HashSet<String> deadPlayers = new HashSet<String>();
-    private World world;
 
     @Override
     public void onEnable() {
@@ -222,8 +219,11 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         // Pour chaque joueur
         Player[] onlinePlayerList = Bukkit.getServer().getOnlinePlayers();
         for (Player player : onlinePlayerList) {
-            BarAPI.setMessage(player, "Temps restant : " + formatter.format(this.minutesLeft) + ":" + formatter.format(this.secondsLeft));
-            BarAPI.setHealth(player, this.minutesLeft * 5);
+            NumberFormat formatter = new DecimalFormat("00");
+            BarAPI.setMessage(player,
+                    "Temps restant : " + formatter.format(this.minutesLeft) + ":" + formatter.format(this.secondsLeft));
+            BarAPI.setHealth(player,
+                    this.minutesLeft * 5);
         }
     }
 
@@ -250,19 +250,16 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
     }
 
     @Override
-    public boolean onCommand(final CommandSender s, Command c, String l, String[] a) {
+    public boolean onCommand(final CommandSender sender, Command c, String l, String[] a) {
         if (c.getName().equalsIgnoreCase("ktp")) {
-            if (!(s instanceof Player)) {
-                s.sendMessage(ChatColor.RED + "Vous devez être un joueur");
+            // On vérifit que l'exécuteur est un joueur
+            if (!(sender instanceof Player)) {
+                sender.sendMessage(ChatColor.RED + "Vous devez être un joueur");
                 return true;
             }
-            Player pl = (Player) s;
-            if (!pl.isOp()) {
-                pl.sendMessage(ChatColor.RED + "Lolnope.");
-                return true;
-            }
+
             if (a.length == 0) {
-                pl.sendMessage("Usage : /ktp <start|shift|size|team|addspawn|generatewalls>");
+                sender.sendMessage("Usage : /ktp <start|shift|size|team|addspawn|generatewalls>");
                 return true;
             }
             if (a[0].equalsIgnoreCase("start")) {
@@ -271,18 +268,19 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                         KTPTeam uht = new KTPTeam(this.sb);
                         uht.setName(p.getName());
                         uht.setDisplayName(p.getName());
-                        
+
                         uht.addPlayer(p);
                         teams.add(uht);
                     }
                 }
                 if (loc.size() < teams.size()) {
-                    s.sendMessage(ChatColor.RED + "Pas assez de positions de TP");
+                    sender.sendMessage(ChatColor.RED + "Pas assez de positions de TP");
                     return true;
                 }
                 LinkedList<Location> unusedTP = loc;
                 for (final KTPTeam t : teams) {
-                    final Location lo = unusedTP.get(this.random.nextInt(unusedTP.size()));
+                    Random random = new Random();
+                    final Location lo = unusedTP.get(random.nextInt(unusedTP.size()));
                     Bukkit.getScheduler().runTaskLater(this, new BukkitRunnable() {
 
                         @Override
@@ -365,16 +363,17 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                 this.gameRunning = true;
                 return true;
             } else if (a[0].equalsIgnoreCase("shift")) {
-                Bukkit.getServer().broadcastMessage(ChatColor.AQUA + "-------- Fin episode " + episode + " [forcé par " + s.getName() + "] --------");
+                Bukkit.getServer().broadcastMessage(ChatColor.AQUA + "-------- Fin episode " + episode + " [forcé par " + sender.getName() + "] --------");
                 shiftEpisode();
                 this.minutesLeft = getEpisodeLength();
                 this.secondsLeft = 0;
                 return true;
             } else if (a[0].equalsIgnoreCase("size")) {
-                Bukkit.getServer().broadcastMessage(ChatColor.RED + "-------- Changement de taille : " + a[1] + " [forcé par " + s.getName() + "] --------");
+                Bukkit.getServer().broadcastMessage(ChatColor.RED + "-------- Changement de taille : " + a[1] + " [forcé par " + sender.getName() + "] --------");
                 setSize(Integer.parseInt(a[1]));
                 return true;
             } else if (a[0].equalsIgnoreCase("team")) {
+                Player pl = (Player) sender;
 
                 // Création d'un inventaire
                 Inventory iv = this.getServer().createInventory(pl, 54, "Liste des teams");
@@ -406,15 +405,19 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                 return true;
 
             } else if (a[0].equalsIgnoreCase("addspawn")) {
+                Player pl = (Player) sender;
+
                 addLocation(pl.getLocation().getBlockX(), pl.getLocation().getBlockZ());
                 pl.sendMessage(ChatColor.DARK_GRAY + "Position ajoutée: " + ChatColor.GRAY + pl.getLocation().getBlockX() + "," + pl.getLocation().getBlockZ());
                 return true;
             } else if (a[0].equalsIgnoreCase("generateWalls")) {
-                pl.sendMessage(ChatColor.GRAY + "Génération en cours...");
+                sender.sendMessage(ChatColor.GRAY + "Génération en cours...");
                 try {
                     Integer halfMapSize = (int) Math.floor(this.getConfig().getInt("map.size") / 2);
                     Integer wallHeight = this.getConfig().getInt("map.wall.height");
                     Material wallBlock = Material.getMaterial(this.getConfig().getInt("map.wall.block"));
+
+                    Player pl = (Player) sender;
                     World w = pl.getWorld();
 
                     Location spawn = w.getSpawnLocation();
@@ -447,16 +450,16 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                         }
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
-                    pl.sendMessage(ChatColor.RED + "Echec génération. Voir console pour détails.");
+                    sender.sendMessage(ChatColor.RED + "Echec génération. Voir console pour détails.");
                     return true;
                 }
-                pl.sendMessage(ChatColor.GRAY + "Génération terminée.");
+                sender.sendMessage(ChatColor.GRAY + "Génération terminée.");
                 return true;
             }
         }
         return false;
     }
+
     /*
      public void createTeamCreateInventory(Player pl) {
      // Création d'un inventaire
@@ -489,7 +492,6 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
      pl.openInventory(iv);
      }
      */
-
     public void shiftEpisode() {
         this.episode++;
     }

@@ -1,8 +1,17 @@
 name: KTPPlugin
 main: me.azenet.KTPPlugin.KTPPlugin
-version: 0.2
+version: 2.0
 
 commands:
    ktp:
       description: KTP Control
       usage: /ktp <subcommand>
+      permission: ktp.main
+      aliases:
+          - uh
+          - stf
+
+permissions:
+    ktp.main:
+        description: Permet d'utiliser la commande /ktp
+        default: op
