@@ -46,10 +46,10 @@ import org.bukkit.scoreboard.Scoreboard;
 public final class KTPPlugin extends JavaPlugin implements ConversationAbandonedListener {
 
     private static final Logger logger = Bukkit.getLogger();
-    private final FileConfiguration config_yml = this.getConfig();
+    private FileConfiguration config_yml;
     private final Random random = new Random();
     private final KTPPrompts uhp = new KTPPrompts(this);
-    
+
     private KTPMatchInfo MatchInfo;
 
     private final LinkedList<Location> loc = new LinkedList<Location>();
@@ -61,23 +61,30 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
     private Integer minutesLeft = 0;
     private Integer secondsLeft = 0;
     private final NumberFormat formatter = new DecimalFormat("00");
-    private String sbobjname = "KTP";
     private Boolean damageIsOn = false;
     private final ArrayList<KTPTeam> teams = new ArrayList<KTPTeam>();
     private final HashMap<String, ConversationFactory> cfs = new HashMap<String, ConversationFactory>();
     private final HashSet<String> deadPlayers = new HashSet<String>();
-    private World world = Bukkit.getOnlinePlayers()[0].getWorld();
+    private World world;
 
     @Override
     public void onEnable() {
         // On copie le fichier config.yml
         this.saveDefaultConfig();
 
+        // On ouvre le ficheir config.yml
+        config_yml = this.getConfig();
+
+        // On récupère le monde
+        String mapName = config_yml.getString("map.name");
+        logger.log(Level.INFO, "[KTPPlugin] Chargement pour la map : {0}", mapName);
+        this.world = Bukkit.getWorld(mapName);
+
         // On récupère les positions et on les ajoutes
         List<String> listPositions = config_yml.getStringList("positions");
         for (String positions : listPositions) {
-            logger.log(Level.INFO, "[KTPPlugin] Ajout de la cordonnée '{0}'.", positions);
             String[] pos = positions.split(",");
+            logger.log(Level.INFO, "[KTPPlugin] Ajout de la cordonn\u00e9e {0},{1}", new Object[]{pos[0], pos[1]});
             addLocation(Integer.parseInt(pos[0]), Integer.parseInt(pos[1]));
         }
 
@@ -121,7 +128,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         setTimeBarInfo();
 
         // Création des informations latérales
-        this.MatchInfo = new KTPMatchInfo("KTP");
+        this.MatchInfo = new KTPMatchInfo("KTP", this);
         setMatchInfo();
 
         // On créer un environnement de début
@@ -167,6 +174,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
 
     /**
      * Modifier la taille du terrain
+     * @param size Nouvelle taille
      */
     public void setSize(int size) {
         try {

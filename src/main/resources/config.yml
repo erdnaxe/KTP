@@ -2,6 +2,7 @@ episodeLength: 20
 compass: true
 weather: false
 map:
+    name: 'world'
     size: 2000
     wall:
         height: 128

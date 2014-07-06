@@ -43,7 +43,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 public class KTPPluginListener implements Listener {
 
-    KTPPlugin p = null;
+    KTPPlugin p;
 
     public KTPPluginListener(KTPPlugin p) {
         this.p = p;
