@@ -57,13 +57,7 @@ public class KTPPluginListener implements Listener {
             pp.playSound(pp.getLocation(), Sound.WITHER_SPAWN, 1F, 1F);
         }
         this.p.addDead(ev.getEntity().getName());
-        Bukkit.getScheduler().runTaskLater(this.p, new BukkitRunnable() {
-
-            @Override
-            public void run() {
-                p.setLife((Player) ev.getEntity(), 0);
-            }
-        }, 1L);
+        
         if (this.p.getConfig().getBoolean("kick-on-death.kick", true)) {
             Bukkit.getScheduler().runTaskLater(this.p, new BukkitRunnable() {
 
@@ -91,7 +85,6 @@ public class KTPPluginListener implements Listener {
         if (ev.getItem().getItemStack().getType() == Material.GHAST_TEAR && ev.getPlayer().getGameMode().equals(GameMode.SURVIVAL)) {
             ev.setCancelled(true);
         }
-        p.updatePlayerListName(ev.getPlayer());
     }
 
     @EventHandler
@@ -110,12 +103,6 @@ public class KTPPluginListener implements Listener {
             ev.getPlayer().teleport(l.add(0, 1, 0));
         }
         p.addToScoreboard(ev.getPlayer());
-        Bukkit.getScheduler().runTaskLater(this.p, new BukkitRunnable() {
-            @Override
-            public void run() {
-                p.updatePlayerListName(ev.getPlayer());
-            }
-        }, 1L);
     }
 
     @EventHandler
@@ -261,13 +248,6 @@ public class KTPPluginListener implements Listener {
             if (!p.isTakingDamage()) {
                 ev.setCancelled(true);
             }
-            Bukkit.getScheduler().runTaskLater(this.p, new BukkitRunnable() {
-
-                @Override
-                public void run() {
-                    p.updatePlayerListName((Player) ev.getEntity());
-                }
-            }, 1L);
         }
     }
 
@@ -275,15 +255,6 @@ public class KTPPluginListener implements Listener {
     public void onEntityRegainHealth(final EntityRegainHealthEvent ev) {
         if (ev.getRegainReason() == RegainReason.SATIATED) {
             ev.setCancelled(true);
-        }
-        if (ev.getEntity() instanceof Player) {
-            Bukkit.getScheduler().runTaskLater(this.p, new BukkitRunnable() {
-
-                @Override
-                public void run() {
-                    p.updatePlayerListName((Player) ev.getEntity());
-                }
-            }, 1L);
         }
     }
 

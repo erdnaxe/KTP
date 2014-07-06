@@ -32,8 +32,6 @@ import org.bukkit.inventory.ShapelessRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scoreboard.DisplaySlot;
-import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 
 /**
@@ -303,7 +301,6 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                                 p.closeInventory();
                                 p.getActivePotionEffects().clear();
                                 p.setCompassTarget(lo);
-                                setLife(p, 20);
                             }
                         }
                     }, 10L);
@@ -501,23 +498,10 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         return this.gameRunning;
     }
 
-    public void updatePlayerListName(Player p) {
-        /*p.setScoreboard(sb);
-        Integer he = (int) Math.round(p.getHealth());
-        sb.getObjective("Vie").getScore(p).setScore(he);*/
-    }
-
     public void addToScoreboard(Player player) {
-        updatePlayerListName(player);
-
         // AJout à la barre de temps
         BarAPI.setMessage(player, "Temps restant : --;--");
         BarAPI.setHealth(player, 100);
-    }
-
-    public void setLife(Player entity, int i) {
-        entity.setScoreboard(sb);
-        sb.getObjective("Vie").getScore(entity).setScore(i);
     }
 
     public boolean isTakingDamage() {
