@@ -249,6 +249,30 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         return aliveTeams;
     }
 
+    /**
+     * Fonction pour formatter un titre dans le chat.
+     *
+     * @param titre Titre original.
+     * @param couleur Couleur des pointillés
+     * @return Titre formaté.
+     */
+    public String createChatTitle(String titre, ChatColor couleur) {
+        Integer taillePointillees = ((46 - titre.length()) / 2);
+        String chaineSortie = couleur + "";
+
+        for (Integer i = 0; i <= taillePointillees; i++) {
+            chaineSortie += "-";
+        }
+
+        chaineSortie += ChatColor.WHITE + " " + titre + " " + couleur;
+
+        for (Integer i = 0; i <= taillePointillees; i++) {
+            chaineSortie += "-";
+        }
+
+        return chaineSortie;
+    }
+
     @Override
     public boolean onCommand(final CommandSender sender, Command c, String l, String[] a) {
         if (c.getName().equalsIgnoreCase("ktp")) {
@@ -258,10 +282,20 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                 return true;
             }
 
+            // Afficher l'aide si aucun paramètre n'est donné.
             if (a.length == 0) {
-                sender.sendMessage("Usage : /ktp <start|shift|size|team|addspawn|generatewalls>");
+                sender.sendMessage(createChatTitle("Aide : KTP", ChatColor.YELLOW));
+                sender.sendMessage(ChatColor.GOLD + "/ktp start : " + ChatColor.WHITE + "Démarre le jeu");
+                sender.sendMessage(ChatColor.GOLD + "/ktp shift : " + ChatColor.WHITE + "Saute un épisode");
+                sender.sendMessage(ChatColor.GOLD + "/ktp addgamespawn : " + ChatColor.WHITE + "Ajoute un point de spawn");
+                sender.sendMessage(ChatColor.GOLD + "/ktp setspawn : " + ChatColor.WHITE + "Modifie le centre de la map");
+                sender.sendMessage(ChatColor.GOLD + "/ktp setsize : " + ChatColor.WHITE + "Modifie la taille de la map");
+                sender.sendMessage(ChatColor.GOLD + "/ktp generatewalls : " + ChatColor.WHITE + "Crée un mur autour de la map");
+                sender.sendMessage(ChatColor.GOLD + "/ktp addteam : " + ChatColor.WHITE + "Ajoute une équipe");
                 return true;
             }
+
+            // Commandes
             if (a[0].equalsIgnoreCase("start")) {
                 if (teams.isEmpty()) {
                     for (Player p : getServer().getOnlinePlayers()) {
@@ -353,7 +387,8 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                         if (minutesLeft == -1) {
                             minutesLeft = getEpisodeLength();
                             secondsLeft = 0;
-                            Bukkit.getServer().broadcastMessage(ChatColor.AQUA + "-------- Fin episode " + episode + " --------");
+
+                            Bukkit.getServer().broadcastMessage(createChatTitle("Fin épisode", ChatColor.AQUA));
                             shiftEpisode();
                         }
                     }
@@ -363,52 +398,28 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                 this.gameRunning = true;
                 return true;
             } else if (a[0].equalsIgnoreCase("shift")) {
-                Bukkit.getServer().broadcastMessage(ChatColor.AQUA + "-------- Fin episode " + episode + " [forcé par " + sender.getName() + "] --------");
+                Bukkit.getServer().broadcastMessage(createChatTitle("Fin épisode [forcé par " + sender.getName() + "]", ChatColor.AQUA));
                 shiftEpisode();
                 this.minutesLeft = getEpisodeLength();
                 this.secondsLeft = 0;
                 return true;
-            } else if (a[0].equalsIgnoreCase("size")) {
-                Bukkit.getServer().broadcastMessage(ChatColor.RED + "-------- Changement de taille : " + a[1] + " [forcé par " + sender.getName() + "] --------");
-                setSize(Integer.parseInt(a[1]));
-                return true;
-            } else if (a[0].equalsIgnoreCase("team")) {
-                Player pl = (Player) sender;
-
-                // Création d'un inventaire
-                Inventory iv = this.getServer().createInventory(pl, 54, "Liste des teams");
-
-                // Liste des teams disponibles
-                ItemStack is;
-                Integer slot = 0;
-                for (KTPTeam t : teams) {
-                    is = new ItemStack(Material.BEACON, t.getPlayers().size());
-                    ItemMeta im = is.getItemMeta();
-                    im.setDisplayName(t.getChatColor() + t.getDisplayName());
-                    ArrayList<String> lore = new ArrayList<String>();
-                    for (Player p : t.getPlayers()) {
-                        lore.add("- " + p.getDisplayName());
-                    }
-                    im.setLore(lore);
-                    is.setItemMeta(im);
-                    iv.setItem(slot, is);
-                    slot++;
-                }
-
-                // Création d'un diamant
-                ItemStack is2 = new ItemStack(Material.DIAMOND);
-                is2.getItemMeta().setDisplayName(ChatColor.AQUA + "" + ChatColor.ITALIC + "Créer une team");
-                iv.setItem(53, is2);
-
-                // Affichage de l'inventaire
-                pl.openInventory(iv);
-                return true;
-
-            } else if (a[0].equalsIgnoreCase("addspawn")) {
+            } else if (a[0].equalsIgnoreCase("addgamespawn")) {
                 Player pl = (Player) sender;
 
                 addLocation(pl.getLocation().getBlockX(), pl.getLocation().getBlockZ());
                 pl.sendMessage(ChatColor.DARK_GRAY + "Position ajoutée: " + ChatColor.GRAY + pl.getLocation().getBlockX() + "," + pl.getLocation().getBlockZ());
+                return true;
+            } else if (a[0].equalsIgnoreCase("setspawn")) {
+                Player pl = (Player) sender;
+                Location pos = pl.getLocation();
+
+                world.setSpawnLocation(pos.getBlockX(), pos.getBlockY(), pos.getBlockZ());
+                sender.sendMessage(ChatColor.GREEN + "Spawn déplacé !");
+
+                return true;
+            } else if (a[0].equalsIgnoreCase("setsize")) {
+                Bukkit.getServer().broadcastMessage(createChatTitle("Changement de taille [" + a[1] + "]", ChatColor.GOLD));
+                setSize(Integer.parseInt(a[1]));
                 return true;
             } else if (a[0].equalsIgnoreCase("generateWalls")) {
                 sender.sendMessage(ChatColor.GRAY + "Génération en cours...");
@@ -455,6 +466,38 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                 }
                 sender.sendMessage(ChatColor.GRAY + "Génération terminée.");
                 return true;
+            } else if (a[0].equalsIgnoreCase("addteam")) {
+                Player pl = (Player) sender;
+
+                // Création d'un inventaire
+                Inventory iv = this.getServer().createInventory(pl, 54, "Liste des teams");
+
+                // Liste des teams disponibles
+                ItemStack is;
+                Integer slot = 0;
+                for (KTPTeam t : teams) {
+                    is = new ItemStack(Material.BEACON, t.getPlayers().size());
+                    ItemMeta im = is.getItemMeta();
+                    im.setDisplayName(t.getChatColor() + t.getDisplayName());
+                    ArrayList<String> lore = new ArrayList<String>();
+                    for (Player p : t.getPlayers()) {
+                        lore.add("- " + p.getDisplayName());
+                    }
+                    im.setLore(lore);
+                    is.setItemMeta(im);
+                    iv.setItem(slot, is);
+                    slot++;
+                }
+
+                // Création d'un diamant
+                ItemStack is2 = new ItemStack(Material.DIAMOND);
+                is2.getItemMeta().setDisplayName(ChatColor.AQUA + "" + ChatColor.ITALIC + "Créer une team");
+                iv.setItem(53, is2);
+
+                // Affichage de l'inventaire
+                pl.openInventory(iv);
+                return true;
+
             }
         }
         return false;
