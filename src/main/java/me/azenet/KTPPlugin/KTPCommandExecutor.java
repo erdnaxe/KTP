@@ -50,7 +50,12 @@ public class KTPCommandExecutor implements CommandExecutor {
 
             // Si /ktp start, alors on démarre le jeu
             if (args[0].equalsIgnoreCase("start")) {
-                return plugin.startGame(sender);
+                // On démarre
+                plugin.startGame(sender);
+
+                // Réponse
+                Bukkit.getServer().broadcastMessage(tools.createChatTitle("GO !!!", ChatColor.GREEN));
+                return true;
             }
 
             // Si /ktp shift, alors on saute un épisode
@@ -59,7 +64,7 @@ public class KTPCommandExecutor implements CommandExecutor {
                 plugin.shiftEpisode();
 
                 // Réponse
-                Bukkit.getServer().broadcastMessage(tools.createChatTitle("Fin épisode [forcé par " + sender.getName() + "]", ChatColor.AQUA));
+                Bukkit.getServer().broadcastMessage(tools.createChatTitle("[forcé par " + sender.getName() + "]", ChatColor.AQUA));
                 return true;
             }
 

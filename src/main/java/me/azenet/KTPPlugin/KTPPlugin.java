@@ -48,7 +48,6 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
     private Scoreboard sb = null;
 
     private KTPMatchInfo MatchInfo;
-    private KTPPlayerHealth PlayerHealth;
     private ShapelessRecipe goldenMelon = null;
     private ShapedRecipe compass = null;
 
@@ -111,7 +110,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         sb = Bukkit.getServer().getScoreboardManager().getMainScoreboard();
 
         // Création des objectifs
-        this.PlayerHealth = new KTPPlayerHealth(sb);
+        KTPPlayerHealth PlayerHealth = new KTPPlayerHealth(sb);
         this.MatchInfo = new KTPMatchInfo(config.getString("scoreboard", "Kill The Patrick"), sb);
         this.setMatchInfo();
 
@@ -246,8 +245,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
     public boolean startGame(CommandSender sender) {
         if (teams.isEmpty()) {
             for (Player p : getServer().getOnlinePlayers()) {
-                KTPTeam uht = new KTPTeam(this.sb);
-                uht.setName(p.getName());
+                KTPTeam uht = new KTPTeam(p.getName(), this.sb);
                 uht.setDisplayName(p.getName());
 
                 uht.addPlayer(p);
@@ -264,19 +262,24 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         for (final KTPTeam t : teams) {
             Random random = new Random();
             final Location lo = unusedTP.get(random.nextInt(unusedTP.size()));
-            Bukkit.getScheduler().runTaskLater(this, new BukkitRunnable() {
 
+            Bukkit.getScheduler().runTaskLater(this, new BukkitRunnable() {
                 @Override
                 public void run() {
                     t.teleportTo(lo);
                     for (Player p : t.getPlayers()) {
+                        // On paramètre chaque joueurs
                         p.setGameMode(GameMode.SURVIVAL);
                         p.setHealth(20);
                         p.setFoodLevel(20);
                         p.setExhaustion(5F);
                         p.getInventory().clear();
-                        p.getInventory().setArmorContents(new ItemStack[]{new ItemStack(Material.AIR), new ItemStack(Material.AIR),
-                            new ItemStack(Material.AIR), new ItemStack(Material.AIR)});
+                        p.getInventory().setArmorContents(new ItemStack[]{
+                            new ItemStack(Material.AIR),
+                            new ItemStack(Material.AIR),
+                            new ItemStack(Material.AIR),
+                            new ItemStack(Material.AIR)
+                        });
                         p.setExp(0L + 0F);
                         p.setLevel(0);
                         p.closeInventory();
@@ -288,26 +291,33 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
 
             unusedTP.remove(lo);
         }
-        Bukkit.getScheduler().runTaskLater(this, new BukkitRunnable() {
 
+        // On active les dégâts 30 secondes après (20*30)
+        Bukkit.getScheduler().runTaskLater(this, new BukkitRunnable() {
             @Override
             public void run() {
                 damageIsOn = true;
             }
         }, 600L);
 
-        world.setGameRuleValue("doDaylightCycle", ((Boolean) getConfig().getBoolean("daylightCycle.do")).toString());
-        world.setTime(getConfig().getLong("daylightCycle.time"));
-        world.setStorm(false);
-        world.setDifficulty(Difficulty.HARD);
+        // Configuration
+        this.world.setGameRuleValue("doDaylightCycle", ((Boolean) getConfig().getBoolean("daylightCycle.do")).toString());
+        this.world.setTime(getConfig().getLong("daylightCycle.time"));
+        this.world.setStorm(false);
+        this.world.setDifficulty(Difficulty.HARD);
+        this.world.setGameRuleValue("naturalRegeneration", "false");
         this.episode = 1;
         this.minutesLeft = getEpisodeLength();
         this.secondsLeft = 0;
+        this.gameRunning = true;
 
-        // Gestion de la barre de temps
         Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new BukkitRunnable() {
             @Override
             public void run() {
+                // Gestion du scoreboard
+                setMatchInfo();
+
+                // Gestion de la barre de temps
                 setTimeBarInfo();
                 secondsLeft--;
                 if (secondsLeft == -1) {
@@ -315,22 +325,10 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
                     secondsLeft = 59;
                 }
                 if (minutesLeft == -1) {
-                    Bukkit.getServer().broadcastMessage(ChatColor.AQUA + "-------- Fin episode " + episode + " --------");
                     shiftEpisode();
                 }
             }
         }, 20L, 20L);
-
-        // Gestion du Scoreboard
-        Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new BukkitRunnable() {
-            @Override
-            public void run() {
-                setMatchInfo();
-            }
-        }, 20L, 20L);
-
-        Bukkit.getServer().broadcastMessage(ChatColor.GREEN + "--- GO ---");
-        this.gameRunning = true;
 
         return true;
     }
@@ -457,6 +455,9 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         secondsLeft = 0;
 
         this.episode++;
+
+        KTPUtils tools = new KTPUtils();
+        Bukkit.getServer().broadcastMessage(tools.createChatTitle("Fin épisode " + episode, ChatColor.AQUA));
     }
 
     public boolean isGameRunning() {
@@ -506,10 +507,16 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         }
     }
 
+    /**
+     * Fonction pour créer une nouvelle team
+     * 
+     * @param name Nom de la team
+     * @param color Couleur de la team
+     * @return True si aucun pb
+     */
     public boolean createTeam(String name, ChatColor color) {
         if (teams.size() <= 50) {
-            KTPTeam cTeam = new KTPTeam(this.sb);
-            cTeam.setName(name);
+            KTPTeam cTeam = new KTPTeam(name, this.sb);
             cTeam.setDisplayName(name);
             cTeam.setChatColor(color);
             teams.add(cTeam);
@@ -540,5 +547,9 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
 
     public boolean inSameTeam(Player pl, Player pl2) {
         return (getTeamForPlayer(pl).equals(getTeamForPlayer(pl2)));
+    }
+    
+    public FileConfiguration getConfiguration() {
+        return config;
     }
 }

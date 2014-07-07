@@ -33,20 +33,18 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
 import org.bukkit.event.weather.WeatherChangeEvent;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.ShapelessRecipe;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class KTPPluginListener implements Listener {
 
-    KTPPlugin p;
+    KTPPlugin plugin;
 
-    public KTPPluginListener(KTPPlugin p) {
-        this.p = p;
+    public KTPPluginListener(KTPPlugin pl) {
+        this.plugin = pl;
     }
 
     @EventHandler
@@ -56,16 +54,15 @@ public class KTPPluginListener implements Listener {
         for (Player pp : ps) {
             pp.playSound(pp.getLocation(), Sound.WITHER_SPAWN, 1F, 1F);
         }
-        this.p.addDead(ev.getEntity().getName());
-        
-        if (this.p.getConfig().getBoolean("kick-on-death.kick", true)) {
-            Bukkit.getScheduler().runTaskLater(this.p, new BukkitRunnable() {
+        plugin.addDead(ev.getEntity().getName());
 
+        if (plugin.getConfiguration().getBoolean("kick-on-death.kick", true)) {
+            Bukkit.getScheduler().runTaskLater(plugin, new BukkitRunnable() {
                 @Override
                 public void run() {
                     ev.getEntity().kickPlayer("Jay Jay !");
                 }
-            }, 20L * this.p.getConfig().getInt("kick-on-death.time", 30));
+            }, 20L * plugin.getConfiguration().getInt("kick-on-death.time", 30));
         }
 
         try {
@@ -82,6 +79,10 @@ public class KTPPluginListener implements Listener {
 
     @EventHandler
     public void onPlayerPickupItem(PlayerPickupItemEvent ev) {
+        if (!plugin.isGameRunning()) {
+            ev.setCancelled(true);
+        }
+
         if (ev.getItem().getItemStack().getType() == Material.GHAST_TEAR && ev.getPlayer().getGameMode().equals(GameMode.SURVIVAL)) {
             ev.setCancelled(true);
         }
@@ -89,7 +90,7 @@ public class KTPPluginListener implements Listener {
 
     @EventHandler
     public void onPlayerLogin(PlayerLoginEvent ev) {
-        if (this.p.isPlayerDead(ev.getPlayer().getName()) && !this.p.getConfig().getBoolean("allow-reconnect", true)) {
+        if (plugin.isPlayerDead(ev.getPlayer().getName()) && !plugin.getConfiguration().getBoolean("allow-reconnect", true)) {
             ev.setResult(Result.KICK_OTHER);
             ev.setKickMessage("Vous êtes mort !");
         }
@@ -97,24 +98,24 @@ public class KTPPluginListener implements Listener {
 
     @EventHandler
     public void onPlayerJoin(final PlayerJoinEvent ev) {
-        if (!this.p.isGameRunning()) {
+        if (!plugin.isGameRunning()) {
             ev.getPlayer().setGameMode(GameMode.ADVENTURE);
             Location l = ev.getPlayer().getWorld().getSpawnLocation();
             ev.getPlayer().teleport(l.add(0, 1, 0));
         }
-        p.addToScoreboard(ev.getPlayer());
+        plugin.addToScoreboard(ev.getPlayer());
     }
 
     @EventHandler
     public void onBlockBreakEvent(final BlockBreakEvent ev) {
-        if (!this.p.isGameRunning()) {
+        if (!plugin.isGameRunning()) {
             ev.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onBlockPlaceEvent(final BlockPlaceEvent ev) {
-        if (!this.p.isGameRunning()) {
+        if (!plugin.isGameRunning()) {
             ev.setCancelled(true);
         }
     }
@@ -122,7 +123,7 @@ public class KTPPluginListener implements Listener {
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent ev) {
         Location l = ev.getTo();
-        Integer mapSize = p.getConfig().getInt("map.size");
+        Integer mapSize = plugin.getConfiguration().getInt("map.size");
         Integer halfMapSize = (int) Math.floor(mapSize / 2);
         Integer x = l.getBlockX();
         Integer z = l.getBlockZ();
@@ -159,9 +160,9 @@ public class KTPPluginListener implements Listener {
                 //p.createTeamCreateInventory(pl);
             } else if (ev.getCurrentItem().getType() == Material.BEACON) {
                 pl.closeInventory();
-                Conversation c = p.getConversationFactory("playerPrompt").buildConversation(pl);
+                Conversation c = plugin.getConversationFactory("playerPrompt").buildConversation(pl);
                 c.getContext().setSessionData("nomTeam", ChatColor.stripColor(ev.getCurrentItem().getItemMeta().getDisplayName()));
-                c.getContext().setSessionData("color", p.getTeam(ChatColor.stripColor(ev.getCurrentItem().getItemMeta().getDisplayName())).getChatColor());
+                c.getContext().setSessionData("color", plugin.getTeam(ChatColor.stripColor(ev.getCurrentItem().getItemMeta().getDisplayName())).getChatColor());
                 c.begin();
             }
         }
@@ -171,12 +172,12 @@ public class KTPPluginListener implements Listener {
             ev.setCancelled(true);
             if (ev.getCurrentItem().getType() == Material.DIAMOND) {
                 pl.closeInventory();
-                p.getConversationFactory("teamPrompt").buildConversation(pl).begin();
+                plugin.getConversationFactory("teamPrompt").buildConversation(pl).begin();
             } else if (ev.getCurrentItem().getType() == Material.BEACON) {
                 pl.closeInventory();
-                Conversation c = p.getConversationFactory("playerPrompt").buildConversation(pl);
+                Conversation c = plugin.getConversationFactory("playerPrompt").buildConversation(pl);
                 c.getContext().setSessionData("nomTeam", ChatColor.stripColor(ev.getCurrentItem().getItemMeta().getDisplayName()));
-                c.getContext().setSessionData("color", p.getTeam(ChatColor.stripColor(ev.getCurrentItem().getItemMeta().getDisplayName())).getChatColor());
+                c.getContext().setSessionData("color", plugin.getTeam(ChatColor.stripColor(ev.getCurrentItem().getItemMeta().getDisplayName())).getChatColor());
                 c.begin();
             }
         }
@@ -197,7 +198,7 @@ public class KTPPluginListener implements Listener {
                         isCompassValid = true;
                     }
                 }
-                if (!p.getConfig().getBoolean("compass")) {
+                if (!plugin.getConfiguration().getBoolean("compass")) {
                     isCompassValid = true;
                 }
                 if (!isCompassValid && r.getResult().getType() == Material.COMPASS) {
@@ -226,6 +227,11 @@ public class KTPPluginListener implements Listener {
 
     @EventHandler
     public void onEntityDeath(EntityDeathEvent ev) {
+        if (!plugin.isGameRunning()) {
+            ev.setDroppedExp(0);
+            ev.getDrops().clear();
+        }
+
         if (ev.getEntity() instanceof Ghast) {
             Bukkit.getLogger().info("Modifying drops for Ghast");
             List<ItemStack> drops = new ArrayList<ItemStack>(ev.getDrops());
@@ -245,31 +251,24 @@ public class KTPPluginListener implements Listener {
     @EventHandler
     public void onEntityDamage(final EntityDamageEvent ev) {
         if (ev.getEntity() instanceof Player) {
-            if (!p.isTakingDamage()) {
+            if (!plugin.isTakingDamage()) {
                 ev.setCancelled(true);
             }
         }
     }
 
     @EventHandler
-    public void onEntityRegainHealth(final EntityRegainHealthEvent ev) {
-        if (ev.getRegainReason() == RegainReason.SATIATED) {
-            ev.setCancelled(true);
-        }
-    }
-
-    @EventHandler
     public void onPlayerInteract(PlayerInteractEvent ev) {
-        if ((ev.getAction() == Action.RIGHT_CLICK_AIR || ev.getAction() == Action.RIGHT_CLICK_BLOCK) && ev.getPlayer().getItemInHand().getType() == Material.COMPASS && p.getConfig().getBoolean("compass")) {
+        if ((ev.getAction() == Action.RIGHT_CLICK_AIR || ev.getAction() == Action.RIGHT_CLICK_BLOCK) && ev.getPlayer().getItemInHand().getType() == Material.COMPASS && plugin.getConfiguration().getBoolean("compass")) {
             Player pl = ev.getPlayer();
             Boolean foundRottenFlesh = false;
             for (ItemStack is : pl.getInventory().getContents()) {
                 if (is != null && is.getType() == Material.ROTTEN_FLESH) {
-                    p.getLogger().log(Level.INFO, "{0}", is.getAmount());
+                    plugin.getLogger().log(Level.INFO, "{0}", is.getAmount());
                     if (is.getAmount() != 1) {
                         is.setAmount(is.getAmount() - 1);
                     } else {
-                        p.getLogger().info("lol");
+                        plugin.getLogger().info("lol");
                         pl.getInventory().removeItem(is);
                     }
                     pl.updateInventory();
@@ -285,12 +284,12 @@ public class KTPPluginListener implements Listener {
             pl.playSound(pl.getLocation(), Sound.BURP, 1F, 1F);
             Player nearest = null;
             Double distance = 99999D;
-            for (Player pl2 : p.getServer().getOnlinePlayers()) {
+            for (Player pl2 : plugin.getServer().getOnlinePlayers()) {
                 try {
                     Double calc = pl.getLocation().distance(pl2.getLocation());
                     if (calc > 1 && calc < distance) {
                         distance = calc;
-                        if (pl2 != pl && !this.p.inSameTeam(pl, pl2)) {
+                        if (pl2 != pl && !plugin.inSameTeam(pl, pl2)) {
                             nearest = pl2.getPlayer();
                         }
                     }
@@ -308,7 +307,7 @@ public class KTPPluginListener implements Listener {
 
     @EventHandler
     public void onWeatherChange(WeatherChangeEvent ev) {
-        if (!p.getConfig().getBoolean("weather")) {
+        if (!plugin.getConfiguration().getBoolean("weather")) {
             ev.setCancelled(true);
         }
     }
