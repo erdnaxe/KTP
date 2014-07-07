@@ -18,10 +18,10 @@ public class KTPCommandExecutor implements CommandExecutor {
     private final KTPPlugin plugin;
     private final KTPUtils tools;
 
-    public KTPCommandExecutor(KTPPlugin pl) {
+    public KTPCommandExecutor(KTPPlugin pl) {        
         // On récupère la classe du plugin
         plugin = pl;
-
+        
         // On récupère les outils
         tools = new KTPUtils();
     }
