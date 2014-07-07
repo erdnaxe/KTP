@@ -109,13 +109,18 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         // Récupération du Scoreboard du serveur
         sb = Bukkit.getServer().getScoreboardManager().getMainScoreboard();
 
-        // Création des objectifs
-        KTPPlayerHealth PlayerHealth = new KTPPlayerHealth(sb);
-        this.MatchInfo = new KTPMatchInfo(config.getString("scoreboard", "Kill The Patrick"), sb);
-        this.setMatchInfo();
-
         // Création de la barre de temps
         this.setTimeBarInfo();
+
+        // Création des informations
+        KTPPlayerHealth PlayerHealth = new KTPPlayerHealth(sb);
+        this.MatchInfo = new KTPMatchInfo(config.getString("scoreboard", "Kill The Patrick"), sb);
+        Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new BukkitRunnable() {
+            @Override
+            public void run() {
+                setMatchInfo();
+            }
+        }, 20L, 20L);
 
         // On créer un environnement de début
         getServer().getWorlds().get(0).setGameRuleValue("doDaylightCycle", "false");
@@ -314,9 +319,6 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new BukkitRunnable() {
             @Override
             public void run() {
-                // Gestion du scoreboard
-                setMatchInfo();
-
                 // Gestion de la barre de temps
                 setTimeBarInfo();
                 secondsLeft--;
@@ -509,7 +511,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
 
     /**
      * Fonction pour créer une nouvelle team
-     * 
+     *
      * @param name Nom de la team
      * @param color Couleur de la team
      * @return True si aucun pb
@@ -548,7 +550,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
     public boolean inSameTeam(Player pl, Player pl2) {
         return (getTeamForPlayer(pl).equals(getTeamForPlayer(pl2)));
     }
-    
+
     public FileConfiguration getConfiguration() {
         return config;
     }

@@ -18,10 +18,10 @@ public final class KTPPlayerHealth {
     /**
      * Fonction de construction
      *
-     * @param sb Main scoreboard
+     * @param sb Scoreboard principal
      */
     public KTPPlayerHealth(Scoreboard sb) {
-        board = sb; // On récupère le scoreboard
+        board = sb;
 
         // On enlève les anciens objectifs
         try {
@@ -34,7 +34,7 @@ public final class KTPPlayerHealth {
         } catch (NullPointerException e) {
         }
 
-        // Création du Scoreboard des vies
+        // Création de l'objectif des vies
         objective = sb.registerNewObjective("PlayerHealth", "health");
         objective.setDisplayName("PlayerHealth");
         objective.setDisplaySlot(DisplaySlot.PLAYER_LIST);
