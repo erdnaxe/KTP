@@ -11,11 +11,6 @@ Les principaux ajouts sont :
 Utilisation
 ==========
 
-Pour créer un nouveau point de spawn :
-```
-/ktp addspawn
-```
-
 Pour démarrer le ktp :
 
 ```
@@ -27,19 +22,29 @@ Pour sauter d'un épisode :
 /ktp shift
 ```
 
-Pour créer les teams :
+Pour créer un nouveau point de spawn :
 ```
-/ktp team
+/ktp addgamespawn
+```
+
+Pour modifier le spawn du monde :
+```
+/ktp setspawn
 ```
 
 Pour modifier la taille de la map :
 ```
-/ktp size
+/ktp setsize
 ```
 
 Pour génerer les murs :
 ```
 /ktp generatewalls
+```
+
+Pour créer les teams :
+```
+/ktp addteam
 ```
 
 Licence
