@@ -1,5 +1,4 @@
 episodeLength: 20
-compass: true
 weather: false
 map:
     name: 'world'
@@ -15,6 +14,9 @@ scoreboard: Kill The Patrick
 kick-on-death:
     kick: true
     time: 30
+modifications:
+    recetteGoldenMelon: true
+    boussole: true
 positions:
     - '587,593'
     - '592,-278'

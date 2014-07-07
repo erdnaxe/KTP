@@ -43,7 +43,7 @@ import org.bukkit.scoreboard.Scoreboard;
 public final class KTPPlugin extends JavaPlugin implements ConversationAbandonedListener {
 
     private static final Logger logger = Bukkit.getLogger();
-    private FileConfiguration config_yml;
+    private FileConfiguration config;
     private World world;
     private Scoreboard sb = null;
 
@@ -66,22 +66,20 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
 
     @Override
     public void onEnable() {
-        // On copie le fichier config.yml
-        this.saveDefaultConfig();
-
-        // On ouvre le fichier config.yml
-        config_yml = this.getConfig();
+        this.saveDefaultConfig(); // On copie le fichier config.yml
+        config = this.getConfig(); // On ouvre le fichier config.yml
 
         // On récupère le monde
-        String mapName = config_yml.getString("map.name");
-        logger.log(Level.INFO, "[KTPPlugin] Chargement pour la map : {0}", mapName);
-        this.world = Bukkit.getWorld(mapName);
+        this.world = Bukkit.getWorld(config.getString("map.name"));
+        if (this.world == null) {
+            throw new IllegalArgumentException("Mauvais nom de monde !");
+        }
 
         // On récupère les positions et on les ajoutes
-        List<String> listPositions = config_yml.getStringList("positions");
+        List<String> listPositions = config.getStringList("positions");
         for (String positions : listPositions) {
             String[] pos = positions.split(",");
-            logger.log(Level.INFO, "[KTPPlugin] Ajout de la cordonn\u00e9e {0},{1}", new Object[]{pos[0], pos[1]});
+            logger.log(Level.INFO, "[KTPPlugin] Ajout de la cordonn\u00e9e ({0}, {1})", new Object[]{pos[0], pos[1]});
             addLocation(Integer.parseInt(pos[0]), Integer.parseInt(pos[1]));
         }
 
@@ -89,30 +87,24 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         getServer().getPluginManager().registerEvents(new KTPPluginListener(this), this);
 
         // Recette du melon doré
-        try {
+        if (config.getBoolean("modifications.recetteGoldenMelon")) {
             goldenMelon = new ShapelessRecipe(new ItemStack(Material.SPECKLED_MELON));
             goldenMelon.addIngredient(1, Material.GOLD_BLOCK);
             goldenMelon.addIngredient(1, Material.MELON);
             this.getServer().addRecipe(goldenMelon);
-        } finally {
-            logger.info("[KTPPlugin] Recette du melon doré changé !");
         }
 
         // Recette de la boussole
-        try {
-            if (config_yml.getBoolean("compass")) {
-                compass = new ShapedRecipe(new ItemStack(Material.COMPASS));
-                compass.shape(new String[]{"CIE", "IRI", "BIF"});
-                compass.setIngredient('I', Material.IRON_INGOT);
-                compass.setIngredient('R', Material.REDSTONE);
-                compass.setIngredient('C', Material.SULPHUR);
-                compass.setIngredient('E', Material.SPIDER_EYE);
-                compass.setIngredient('B', Material.BONE);
-                compass.setIngredient('F', Material.ROTTEN_FLESH);
-                this.getServer().addRecipe(compass);
-            }
-        } finally {
-            logger.info("[KTPPlugin] Recette de la boussole changé !");
+        if (config.getBoolean("modifications.boussole")) {
+            compass = new ShapedRecipe(new ItemStack(Material.COMPASS));
+            compass.shape(new String[]{"CIE", "IRI", "BIF"});
+            compass.setIngredient('I', Material.IRON_INGOT);
+            compass.setIngredient('R', Material.REDSTONE);
+            compass.setIngredient('C', Material.SULPHUR);
+            compass.setIngredient('E', Material.SPIDER_EYE);
+            compass.setIngredient('B', Material.BONE);
+            compass.setIngredient('F', Material.ROTTEN_FLESH);
+            this.getServer().addRecipe(compass);
         }
 
         // Récupération du Scoreboard du serveur
@@ -120,7 +112,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
 
         // Création des objectifs
         this.PlayerHealth = new KTPPlayerHealth(sb);
-        this.MatchInfo = new KTPMatchInfo("KTP", sb);
+        this.MatchInfo = new KTPMatchInfo(config.getString("scoreboard", "Kill The Patrick"), sb);
         this.setMatchInfo();
 
         // Création de la barre de temps
