@@ -29,11 +29,6 @@ public class KTPCommandExecutor implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("ktp")) {
-            // On vérifit que l'exécuteur est un joueur
-            if (!(sender instanceof Player)) {
-                sender.sendMessage(ChatColor.RED + "Vous devez être un joueur");
-                return true;
-            }
 
             // Afficher l'aide si aucun paramètre n'est donné.
             if (args.length == 0) {
@@ -45,6 +40,12 @@ public class KTPCommandExecutor implements CommandExecutor {
                 sender.sendMessage(ChatColor.GOLD + "/ktp setsize : " + ChatColor.WHITE + "Modifie la taille de la map");
                 sender.sendMessage(ChatColor.GOLD + "/ktp generatewalls : " + ChatColor.WHITE + "Crée un mur autour de la map");
                 sender.sendMessage(ChatColor.GOLD + "/ktp addteam : " + ChatColor.WHITE + "Ajoute une équipe");
+                return true;
+            }
+
+            // On vérifit que l'exécuteur est un joueur
+            if (!(sender instanceof Player)) {
+                sender.sendMessage(ChatColor.RED + "Vous devez etre un joueur");
                 return true;
             }
 
