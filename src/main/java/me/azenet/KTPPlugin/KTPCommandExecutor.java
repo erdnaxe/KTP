@@ -37,9 +37,15 @@ public class KTPCommandExecutor implements CommandExecutor {
                 sender.sendMessage(ChatColor.GOLD + "/ktp shift : " + ChatColor.WHITE + "Saute un épisode");
                 sender.sendMessage(ChatColor.GOLD + "/ktp addgamespawn : " + ChatColor.WHITE + "Ajoute un point de spawn");
                 sender.sendMessage(ChatColor.GOLD + "/ktp setspawn : " + ChatColor.WHITE + "Modifie le centre de la map");
-                sender.sendMessage(ChatColor.GOLD + "/ktp setsize : " + ChatColor.WHITE + "Modifie la taille de la map");
+                sender.sendMessage(ChatColor.GOLD + "/ktp setsize <size> : " + ChatColor.WHITE + "Modifie la taille de la map");
                 sender.sendMessage(ChatColor.GOLD + "/ktp generatewalls : " + ChatColor.WHITE + "Crée un mur autour de la map");
                 sender.sendMessage(ChatColor.GOLD + "/ktp addteam : " + ChatColor.WHITE + "Ajoute une équipe");
+                sender.sendMessage(ChatColor.DARK_BLUE + "Don't forget that you must be a player to issue one of these commands !" + ChatColor.WHITE + "");
+                return true;
+            }
+
+            if (args[0].equalsIgnoreCase("help") || args[0].equalsIgnoreCase("?")) {
+                sender.sendMessage(ChatColor.GOLD + "To get help, enter " + ChatColor.WHITE + "/ktp" + ChatColor.GOLD + " alone.");
                 return true;
             }
 
