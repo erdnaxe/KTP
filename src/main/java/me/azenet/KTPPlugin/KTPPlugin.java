@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import me.confuser.barapi.BarAPI;
+//import me.confuser.barapi.BarAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Difficulty;
@@ -215,14 +215,14 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
      */
     public void setTimeBarInfo() {
         // Pour chaque joueur
-        Player[] onlinePlayerList = Bukkit.getServer().getOnlinePlayers();
-        for (Player player : onlinePlayerList) {
-            NumberFormat formatter = new DecimalFormat("00");
-            BarAPI.setMessage(player,
-                    "Temps restant : " + formatter.format(this.minutesLeft) + ":" + formatter.format(this.secondsLeft));
-            BarAPI.setHealth(player,
-                    this.minutesLeft * 5);
-        }
+        //Player[] onlinePlayerList = Bukkit.getServer().getOnlinePlayers();
+        //for (Player player : onlinePlayerList) {
+            //NumberFormat formatter = new DecimalFormat("00");
+            //BarAPI.setMessage(player,
+                    //"Temps restant : " + formatter.format(this.minutesLeft) + ":" + formatter.format(this.secondsLeft));
+            //BarAPI.setHealth(player,
+                   // this.minutesLeft * 5);
+        //}
     }
 
     /**
@@ -230,7 +230,7 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
      */
     public void setMatchInfo() {
         this.MatchInfo.setEpisode(episode);
-        this.MatchInfo.setNbJoueurs(Bukkit.getServer().getOnlinePlayers().length);
+        //this.MatchInfo.setNbJoueurs(Bukkit.getServer().getOnlinePlayers().length);
         this.MatchInfo.setNbTeams(getAliveTeams().size());
         this.MatchInfo.refreshMatchInfo();
     }
@@ -468,8 +468,8 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
 
     public void addToScoreboard(Player player) {
         // AJout à la barre de temps
-        BarAPI.setMessage(player, "Temps restant : --;--");
-        BarAPI.setHealth(player, 100);
+        //BarAPI.setMessage(player, "Temps restant : --;--");
+        //BarAPI.setHealth(player, 100);
     }
 
     public boolean isTakingDamage() {
