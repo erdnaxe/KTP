@@ -1,0 +1,16 @@
+[
+{
+  "modid": "uhcmod",
+  "name": "UHCMod",
+  "description": "Example placeholder mod.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["erdnaxe", "aviallon"],
+  "credits": "Fork from the bukkit plugin of Azenet.",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]

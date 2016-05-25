@@ -15,3 +15,4 @@ permissions:
     ktp.main:
         description: Permet d'utiliser la commande /ktp
         default: op
+# TO BE REMOVED
