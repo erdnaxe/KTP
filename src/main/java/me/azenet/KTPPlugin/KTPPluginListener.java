@@ -1,6 +1,7 @@
 package me.azenet.KTPPlugin;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -21,8 +22,6 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.entity.EntityRegainHealthEvent;
-import org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -50,10 +49,10 @@ public class KTPPluginListener implements Listener {
     @EventHandler
     public void onPlayerDeath(final PlayerDeathEvent ev) {
         Location l = ev.getEntity().getLocation();
-        //Player[] ps = Bukkit.getServer().getOnlinePlayers();
-        /*for (Player pp : ps) {
+        Collection<? extends Player> ps = Bukkit.getServer().getOnlinePlayers();
+        for (Player pp : ps) {
             pp.playSound(pp.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1F, 1F);
-        }*/
+        }
         plugin.addDead(ev.getEntity().getName());
 
         if (plugin.getConfiguration().getBoolean("kick-on-death.kick", true)) {

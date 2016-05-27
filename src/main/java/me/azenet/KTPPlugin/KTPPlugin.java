@@ -420,38 +420,38 @@ public final class KTPPlugin extends JavaPlugin implements ConversationAbandoned
         return true;
     }
 
-    /*
+
      public void createTeamCreateInventory(Player pl) {
-     // Création d'un inventaire
-     Inventory iv = this.getServer().createInventory(pl, 54, "Création d'une team");
+         // Création d'un inventaire
+         Inventory iv = this.getServer().createInventory(pl, 54, "Création d'une team");
 
-     // Liste des teams disponibles
-     ItemStack is;
-     Integer slot = 0;
+         // Liste des teams disponibles
+         ItemStack is;
+         Integer slot = 0;
 
-     for (KTPTeam t : teams) {
-     is = new ItemStack(Material.BEACON, t.getPlayers().size());
-     ItemMeta im = is.getItemMeta();
-     im.setDisplayName(t.getChatColor() + t.getDisplayName());
-     ArrayList<String> lore = new ArrayList<String>();
-     for (Player p : t.getPlayers()) {
-     lore.add("- " + p.getDisplayName());
+         for (KTPTeam t : teams) {
+             is = new ItemStack(Material.BEACON, t.getPlayers().size());
+             ItemMeta im = is.getItemMeta();
+             im.setDisplayName(t.getChatColor() + t.getDisplayName());
+             ArrayList<String> lore = new ArrayList<String>();
+             for (Player p : t.getPlayers()) {
+                 lore.add("- " + p.getDisplayName());
+             }
+             im.setLore(lore);
+             is.setItemMeta(im);
+             iv.setItem(slot, is);
+             slot++;
+         }
+
+         // Création d'un diamant
+         ItemStack is2 = new ItemStack(Material.DIAMOND);
+         is2.getItemMeta().setDisplayName(ChatColor.AQUA + "" + ChatColor.ITALIC + "Créer une team");
+         iv.setItem(53, is2);
+
+         // Affichage de l'inventaire
+         pl.openInventory(iv);
      }
-     im.setLore(lore);
-     is.setItemMeta(im);
-     iv.setItem(slot, is);
-     slot++;
-     }
 
-     // Création d'un diamant
-     ItemStack is2 = new ItemStack(Material.DIAMOND);
-     is2.getItemMeta().setDisplayName(ChatColor.AQUA + "" + ChatColor.ITALIC + "Créer une team");
-     iv.setItem(53, is2);
-
-     // Affichage de l'inventaire
-     pl.openInventory(iv);
-     }
-     */
     public void shiftEpisode() {
         minutesLeft = getEpisodeLength();
         secondsLeft = 0;
